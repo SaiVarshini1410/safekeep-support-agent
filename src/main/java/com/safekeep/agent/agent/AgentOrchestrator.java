@@ -95,57 +95,111 @@ public class AgentOrchestrator implements InvestigationRunner {
         conv.add(LlmMessage.user(prompts.kickoff(inv, latestDetails(id), conversationContext(id),
                 findings.findByInvestigationIdOrderByIdAsc(id))));
 
-        boolean exhausted = false;
-        loop:
+        RunState st = new RunState(conv, tools.stream().map(LlmToolSpec::name).toList());
+        ValidationContext ctx;
+        ValidatedOutput out;
+        int round = 0;
         while (true) {
-            if (inv.getToolCallsUsed() >= cfg.maxToolCalls()) {
-                exhausted = true;
-                break;
+            inv = toolPhase(id, inv, tools, st);
+            if (st.exhausted) {
+                conv.add(LlmMessage.user(prompts.budgetExhausted(cfg.maxToolCalls())));
             }
-            LlmResponse r = chatWithRetry(new LlmRequest(conv, tools, false));
-            if (!r.hasToolCalls()) {
-                if (!r.content().isBlank()) conv.add(LlmMessage.assistant(r.content(), null));
-                break;
-            }
-            conv.add(LlmMessage.assistant(r.content(), r.toolCalls()));
-            for (LlmToolCall call : r.toolCalls()) {
-                if (inv.getToolCallsUsed() >= cfg.maxToolCalls()) {
-                    exhausted = true;
-                    break loop;
-                }
-                investigations.publish(id, "tool", "Calling " + call.name() + " " + call.arguments());
-                ToolCallOutcome o = gateway.executeForAgent(inv, call.name(), call.arguments());
-                inv = investigations.mutate(id, Investigation::recordToolCall);
-                investigations.publish(id, "tool", o.evidenceId() + " " + call.name() + ": " + o.status()
-                        + (o.errorCode() == null ? "" : " " + o.errorCode()));
-                conv.add(LlmMessage.tool(call.name(), gateway.contentForModel(o, cfg.maxToolResultChars())));
-            }
-        }
-        if (exhausted) {
-            conv.add(LlmMessage.user(prompts.budgetExhausted(cfg.maxToolCalls())));
-        }
-
-        investigations.publish(id, "analysis", "Analyzing evidence");
-        conv.add(LlmMessage.user(prompts.finalInstruction()));
-        ValidationContext ctx = context(id, app);
-        LlmResponse fin = chatWithRetry(new LlmRequest(conv, List.of(), true));
-        ValidationResult vr = validator.validate(fin.content(), ctx);
-        if (!vr.valid()) {
-            conv.add(LlmMessage.assistant(fin.content(), null));
-            conv.add(LlmMessage.user(prompts.repair(vr.error())));
-            fin = chatWithRetry(new LlmRequest(conv, List.of(), true));
-            vr = validator.validate(fin.content(), ctx);
+            investigations.publish(id, "analysis", "Analyzing evidence");
+            conv.add(LlmMessage.user(prompts.finalInstruction(evidenceDigest(id), actions)));
+            ctx = context(id, app);
+            LlmResponse fin = chatWithRetry(new LlmRequest(conv, List.of(), true));
+            ValidationResult vr = validator.validate(fin.content(), ctx);
             if (!vr.valid()) {
-                fail(id, "Invalid AI output");
-                return;
+                conv.add(LlmMessage.assistant(fin.content(), null));
+                conv.add(LlmMessage.user(prompts.repair(vr.error())));
+                fin = chatWithRetry(new LlmRequest(conv, List.of(), true));
+                vr = validator.validate(fin.content(), ctx);
+                if (!vr.valid()) {
+                    fail(id, "Invalid AI output");
+                    return;
+                }
             }
+            out = vr.output();
+            // Guard: do not ask the user while tools that could answer are still unused (one extra round)
+            List<String> unused = st.unused();
+            if (out.questionForUser() != null && round == 0 && !st.exhausted && !unused.isEmpty()) {
+                round++;
+                conv.add(LlmMessage.assistant(fin.content(), null));
+                conv.add(LlmMessage.user(prompts.useToolsBeforeAsking(unused)));
+                investigations.publish(id, "analysis", "Using remaining tools before asking the user");
+                continue;
+            }
+            break;
         }
-        ValidatedOutput out = vr.output();
-        if (exhausted) {
+        if (st.exhausted) {
             out = out.withMissingIfEmpty("Investigation stopped after " + cfg.maxToolCalls()
                     + " tool calls; some evidence may be missing.");
         }
         persist(id, out);
+    }
+
+    /** Mutable state of one run's tool phase. */
+    private static final class RunState {
+        final List<LlmMessage> conv;
+        final List<String> toolNames;
+        final Set<String> used = new HashSet<>();
+        final Map<String, String> callCache = new HashMap<>();
+        int nudges;
+        boolean exhausted;
+
+        RunState(List<LlmMessage> conv, List<String> toolNames) {
+            this.conv = conv;
+            this.toolNames = toolNames;
+        }
+
+        List<String> unused() {
+            return toolNames.stream().filter(n -> !used.contains(n)).toList();
+        }
+    }
+
+    private Investigation toolPhase(Long id, Investigation inv, List<LlmToolSpec> tools, RunState st) {
+        while (true) {
+            if (inv.getToolCallsUsed() >= cfg.maxToolCalls()) {
+                st.exhausted = true;
+                return inv;
+            }
+            LlmResponse r = chatWithRetry(new LlmRequest(st.conv, tools, false));
+            if (!r.hasToolCalls()) {
+                if (!r.content().isBlank()) st.conv.add(LlmMessage.assistant(r.content(), null));
+                List<String> unused = st.unused();
+                // Small models stop early: code nudges them toward unused tools (bounded)
+                if (inv.getToolCallsUsed() < cfg.minToolCalls() && !unused.isEmpty() && st.nudges < 2) {
+                    st.nudges++;
+                    st.conv.add(LlmMessage.user(prompts.nudge(unused)));
+                    investigations.publish(id, "analysis", "Asking the model to gather more evidence");
+                    continue;
+                }
+                return inv;
+            }
+            st.conv.add(LlmMessage.assistant(r.content(), r.toolCalls()));
+            for (LlmToolCall call : r.toolCalls()) {
+                if (inv.getToolCallsUsed() >= cfg.maxToolCalls()) {
+                    st.exhausted = true;
+                    return inv;
+                }
+                String cacheKey = call.name() + json.write(new TreeMap<>(call.arguments()));
+                String previous = st.callCache.get(cacheKey);
+                inv = investigations.mutate(id, Investigation::recordToolCall);
+                if (previous != null) {      // Guard: identical repeat is not executed again
+                    st.conv.add(LlmMessage.tool(call.name(), "Already called with the same arguments; see "
+                            + previous + ". Use a different tool."));
+                    investigations.publish(id, "tool", "Skipped repeated call " + call.name() + " (see " + previous + ")");
+                    continue;
+                }
+                st.used.add(call.name());
+                investigations.publish(id, "tool", "Calling " + call.name() + " " + call.arguments());
+                ToolCallOutcome o = gateway.executeForAgent(inv, call.name(), call.arguments());
+                st.callCache.put(cacheKey, o.evidenceId());
+                investigations.publish(id, "tool", o.evidenceId() + " " + call.name() + ": " + o.status()
+                        + (o.errorCode() == null ? "" : " " + o.errorCode()));
+                st.conv.add(LlmMessage.tool(call.name(), gateway.contentForModel(o, cfg.maxToolResultChars())));
+            }
+        }
     }
 
     private void persist(Long id, ValidatedOutput out) {
@@ -204,6 +258,19 @@ public class AgentOrchestrator implements InvestigationRunner {
         Map<String, ToolCallStatus> evidence = new HashMap<>();
         toolCalls.findByInvestigationIdOrderByIdAsc(id).forEach(t -> evidence.put(t.getEvidenceId(), t.getStatus()));
         return new ValidationContext(evidence, app, name -> registry.isEnabled(app.id(), name));
+    }
+
+    /** Re-lists every evidence item right before the final answer: small models lose track of earlier results. */
+    private String evidenceDigest(Long id) {
+        StringBuilder sb = new StringBuilder();
+        for (ToolCall t : toolCalls.findByInvestigationIdOrderByIdAsc(id)) {
+            if (t.isAction()) continue;
+            String r = t.getResultJson() == null ? "" : t.getResultJson();
+            if (r.length() > 600) r = r.substring(0, 600) + "...";
+            sb.append('[').append(t.getEvidenceId()).append("] ").append(t.getToolName()).append(' ')
+              .append(t.getArgsJson()).append(" -> ").append(t.getStatus()).append(": ").append(r).append('\n');
+        }
+        return sb.isEmpty() ? "(none)\n" : sb.toString();
     }
 
     private Object latestDetails(Long id) {

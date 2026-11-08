@@ -20,7 +20,7 @@ safekeep:
     storage-server: ${STORAGE_SERVER_API_KEY:}
   agent:
     ollama-url: http://localhost:11434
-    model: llama3.2:3b
+    model: qwen2.5:3b
     temperature: 0.1
     max-tool-calls: 8
     llm-timeout-seconds: 60
@@ -30,3 +30,4 @@ safekeep:
     max-tool-result-chars: 1500
     proposal-ttl-minutes: 15
     worker-threads: 4
+    min-tool-calls: 4

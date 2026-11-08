@@ -20,8 +20,9 @@ public class EventController {
 
     @PostMapping
     public ResponseEntity<IntakeResult> receive(@RequestHeader(value = "X-Api-Key", required = false) String apiKey,
+                                                @RequestHeader(value = "X-Demo-Scenario", required = false) String scenario,
                                                 @RequestBody(required = false) EventRequest body) {
-        IntakeResult r = intake.receive(apiKey, body, null);
+        IntakeResult r = intake.receive(apiKey, body, scenario);
         return ResponseEntity.status(r.status() == IntakeStatus.CREATED ? 202 : 200).body(r);
     }
 }

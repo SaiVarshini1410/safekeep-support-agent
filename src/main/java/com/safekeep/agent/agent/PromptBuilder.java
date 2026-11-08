@@ -27,6 +27,8 @@ public class PromptBuilder {
           .append("- CONFIRMED means directly measured in a tool result. SUSPECTED means your inference. ")
           .append("RULED_OUT means the evidence excludes that cause.\n")
           .append("- Never claim that an action was executed. You can only propose one of the actions listed below; a human must approve it.\n")
+          .append("- Find the CAUSE, not only the symptom: after confirming the metric, check processes, sessions, logs and recent changes as relevant.\n")
+          .append("- Never ask the user for information that one of your tools can provide.\n")
           .append("- If information is missing, say what is missing and what to check next.\n")
           .append("- When you have enough evidence, stop calling tools and reply with a short plain-text summary.\n");
         if (!app.config().thresholds().isEmpty()) {
@@ -67,26 +69,48 @@ public class PromptBuilder {
         return sb.toString();
     }
 
+    public String nudge(List<String> unusedTools) {
+        return "You have not gathered enough evidence to explain the cause yet. Tools you have not used: "
+                + String.join(", ", unusedTools) + ". Call the most relevant one now.";
+    }
+
+    public String useToolsBeforeAsking(List<String> unusedTools) {
+        return "Do not ask the user yet. First use your remaining tools, which may contain the answer: "
+                + String.join(", ", unusedTools) + ". Call the most relevant one now.";
+    }
+
     public String budgetExhausted(int max) {
         return "You have used all " + max + " available tool calls. Do not call more tools.";
     }
 
-    public String finalInstruction() {
+    public String finalInstruction(String evidenceDigest, List<ActionConfig> actions) {
+        String actionNames = actions.isEmpty() ? "none" : String.join(", ", actions.stream().map(ActionConfig::name).toList());
         return """
+                Evidence collected:
+                %s
                 Now write your final answer as ONE JSON object and nothing else, with these fields:
                 {
+                  "observations": [{"evidenceId": "E1", "fact": "an abnormal or important value you saw"}],
                   "summary": "2-4 sentences in plain language",
                   "findings": [{"kind": "CONFIRMED or SUSPECTED or RULED_OUT", "statement": "...", "evidenceIds": ["E1"]}],
                   "missingInformation": ["what could not be determined"],
                   "recommendations": [{"text": "next step", "priority": 1}],
-                  "proposedAction": {"name": "one of the proposable actions", "params": {}, "reason": "..."} or null,
+                  "proposedAction": {"name": "action name", "params": {}, "reason": "..."} or null,
                   "questionForUser": "one question" or null,
                   "resolution": "UNRESOLVED" or "UNKNOWN"
                 }
-                Use only evidence IDs that appear in the tool results.
-                Use "UNRESOLVED" if the evidence shows the problem is still present, otherwise "UNKNOWN".
-                Set questionForUser only if you cannot determine the cause and the user could help.
-                """;
+                How to decide:
+                - observations: first list the abnormal values in the evidence (numbers far above normal,
+                  errors, stale or failed items, recent upgrades or changes). Look at EVERY evidence item.
+                - A finding is CONFIRMED when a tool result directly shows it; cite that evidence ID.
+                  An explanation of WHY it happens is SUSPECTED.
+                - The suspected root cause must explain the abnormal values in observations.
+                - Proposable actions: %s. If one of them directly fixes a CONFIRMED problem, put it in proposedAction.
+                - questionForUser: only if the cause is still unknown and only a human can provide the missing
+                  information. Otherwise null.
+                - resolution: "UNRESOLVED" if the evidence shows the problem is still present, otherwise "UNKNOWN".
+                - Use only evidence IDs listed above.
+                """.formatted(evidenceDigest, actionNames);
     }
 
     public String repair(String error) {

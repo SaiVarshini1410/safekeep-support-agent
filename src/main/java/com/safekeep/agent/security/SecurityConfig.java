@@ -42,7 +42,11 @@ public class SecurityConfig {
                     .hasAnyRole(Role.SUPPORT_ENGINEER.name(), Role.ADMIN.name())
                 .requestMatchers("/api/applications/**", "/applications/**").hasRole(Role.ADMIN.name())
                 .anyRequest().authenticated())
-            .csrf(c -> c.ignoringRequestMatchers(PathPatternRequestMatcher.withDefaults().matcher("/api/events")))
+            // CSRF protects browser sessions. API key and Basic-auth clients send credentials in headers,
+            // which a malicious site cannot make a browser add, so they are exempt.
+            .csrf(c -> c.ignoringRequestMatchers(
+                    PathPatternRequestMatcher.withDefaults().matcher("/api/events"),
+                    request -> request.getHeader("Authorization") != null))
             .formLogin(Customizer.withDefaults())
             .httpBasic(Customizer.withDefaults())
             .logout(Customizer.withDefaults())

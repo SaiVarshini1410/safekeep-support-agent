@@ -21,10 +21,10 @@ public record SafekeepProperties(Map<String, ApplicationConfig> applications,
     public record Agent(String ollamaUrl, String model, Double temperature, Integer maxToolCalls,
                         Integer llmTimeoutSeconds, Integer llmRetries, Long retryBackoffMs,
                         Integer toolTimeoutSeconds, Integer maxToolResultChars,
-                        Integer proposalTtlMinutes, Integer workerThreads) {
+                        Integer proposalTtlMinutes, Integer workerThreads, Integer minToolCalls) {
         public Agent {
             ollamaUrl = ollamaUrl == null ? "http://localhost:11434" : ollamaUrl;
-            model = model == null ? "llama3.2:3b" : model;
+            model = model == null ? "qwen2.5:3b" : model;
             temperature = temperature == null ? 0.1 : temperature;
             maxToolCalls = maxToolCalls == null ? 8 : maxToolCalls;
             llmTimeoutSeconds = llmTimeoutSeconds == null ? 60 : llmTimeoutSeconds;
@@ -34,10 +34,11 @@ public record SafekeepProperties(Map<String, ApplicationConfig> applications,
             maxToolResultChars = maxToolResultChars == null ? 1500 : maxToolResultChars;
             proposalTtlMinutes = proposalTtlMinutes == null ? 15 : proposalTtlMinutes;
             workerThreads = workerThreads == null ? 4 : workerThreads;
+            minToolCalls = minToolCalls == null ? 3 : minToolCalls;
         }
 
         public static Agent defaults() {
-            return new Agent(null, null, null, null, null, null, null, null, null, null, null);
+            return new Agent(null, null, null, null, null, null, null, null, null, null, null, null);
         }
     }
 }
