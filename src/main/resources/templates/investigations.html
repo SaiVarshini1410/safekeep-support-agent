@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Investigations')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+    <main class="content" th:attr="data-autorefresh=${anyOpen}">
+        <header class="page-head">
+            <div>
+                <h1>Investigations</h1>
+                <p class="muted">Every event the Agent received, newest first. Filters turn this into history.</p>
+            </div>
+            <a class="btn" href="/simulator">Send an event</a>
+        </header>
+        <form class="filters" method="get">
+            <select name="state" onchange="this.form.submit()">
+                <option value="">All states</option>
+                <option th:each="s : ${states}" th:value="${s}" th:text="${@fmt.label(s)}" th:selected="${s == state}"></option>
+            </select>
+            <select name="app" onchange="this.form.submit()">
+                <option value="">All applications</option>
+                <option value="backup-server" th:selected="${app == 'backup-server'}">Backup Server</option>
+                <option value="storage-server" th:selected="${app == 'storage-server'}">Storage Server</option>
+            </select>
+        </form>
+        <div class="card flush" th:if="${!items.isEmpty()}">
+            <table class="table">
+                <thead><tr><th>ID</th><th>Event</th><th>Application</th><th>State</th><th>Resolution</th><th>Events</th><th>Created</th></tr></thead>
+                <tbody>
+                <tr th:each="i : ${items}" class="row-link" th:attr="data-href='/investigations/' + ${i.id}">
+                    <td class="mono strong" th:text="${i.displayId}">INV-101</td>
+                    <td><div class="strong" th:text="${i.eventType}">HIGH_MEMORY</div><small class="muted mono" th:text="${i.resource}">res</small></td>
+                    <td th:text="${i.applicationId}">backup-server</td>
+                    <td><span class="badge" th:classappend="'st-' + ${i.state}" th:text="${@fmt.label(i.state)}">State</span></td>
+                    <td><span class="badge" th:classappend="'res-' + ${i.resolution}" th:text="${@fmt.label(i.resolution)}">Res</span></td>
+                    <td><span th:text="${i.eventCount}">1</span>
+                        <span class="badge subtle" th:if="${i.recurrenceOfId != null}" th:text="'recurrence of INV-' + ${i.recurrenceOfId}">rec</span></td>
+                    <td class="muted" th:text="${@fmt.ago(i.createdAt)}">2m ago</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty" th:if="${items.isEmpty()}">
+            <h3>No investigations yet</h3>
+            <p class="muted">Send an event from the simulator to start one.</p>
+            <a class="btn primary" href="/simulator">Open the Event Simulator</a>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Event Simulator')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+    <main class="content">
+        <header class="page-head">
+            <div>
+                <h1>Event Simulator</h1>
+                <p class="muted">Plays the role of the monitored applications. Each button sends a real event to
+                    <span class="mono">POST /api/events</span> with that application's API key.</p>
+            </div>
+        </header>
+        <section th:each="entry : ${byApp}" class="app-group">
+            <h2 class="section-title">
+                <span th:text="${entry.key == 'backup-server'} ? 'Backup Server' : 'Backup Storage Server'">App</span>
+                <span class="muted mono small" th:text="${entry.key}">id</span>
+            </h2>
+            <div class="grid cards-3">
+                <article class="card scenario" th:each="s : ${entry.value}">
+                    <div class="scenario-top">
+                        <span class="badge subtle mono" th:text="${s.id}">S-1A</span>
+                        <span class="badge subtle" th:text="${s.useCase}">UC-1</span>
+                        <span class="badge" th:classappend="${s.tier == 'Core'} ? 'tier-core' : 'tier-extra'" th:text="${s.tier}">Core</span>
+                    </div>
+                    <h3 th:text="${s.title}">Title</h3>
+                    <p class="mono small muted"><span th:text="${s.eventType}">EVENT</span> · <span th:text="${s.resource}">res</span></p>
+                    <details class="json">
+                        <summary>Event details</summary>
+                        <pre th:text="${s.details}">{}</pre>
+                    </details>
+                    <div class="actions">
+                        <button class="btn primary" data-action="send" th:attr="data-scenario=${s.id}">Send event</button>
+                        <button class="btn ghost" data-action="reset" th:attr="data-scenario=${s.id}" title="Restore this scenario's data">Reset data</button>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </main>
+</div>
+<div id="toast" class="toast" hidden></div>
+</body>
+</html>

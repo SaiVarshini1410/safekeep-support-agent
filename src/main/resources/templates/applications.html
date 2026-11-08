@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Applications')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+    <main class="content">
+        <header class="page-head">
+            <div>
+                <h1>Applications</h1>
+                <p class="muted">Configured from YAML. Toggles take effect immediately for new tool calls and are audited.</p>
+            </div>
+        </header>
+        <section class="card" th:each="a : ${apps}">
+            <div class="row gap">
+                <h2 th:text="${a.name}">App</h2>
+                <span class="mono muted small" th:text="${a.id}">id</span>
+                <span class="badge" th:classappend="${a.available} ? 'ok' : 'bad'" th:text="${a.available} ? 'Connected' : 'Unavailable'"></span>
+            </div>
+            <p class="muted small" th:if="${a.error != null}" th:text="${a.error}"></p>
+            <div class="kv-inline">
+                <span class="muted">Event types</span>
+                <span class="badge subtle mono" th:each="t : ${a.eventTypes}" th:text="${t}"></span>
+            </div>
+            <div class="kv-inline"><span class="muted">Thresholds</span> <span class="mono small" th:text="${a.thresholds}"></span></div>
+            <div class="layout-2 even">
+                <div>
+                    <h3>Read tools</h3>
+                    <table class="table compact">
+                        <tr th:each="t : ${a.tools}">
+                            <td class="mono" th:text="${t.name}"></td>
+                            <td class="small muted" th:text="${t.eventTypes}"></td>
+                            <td class="right"><label class="switch">
+                                <input type="checkbox" data-action="toggle" th:attr="data-app=${a.id},data-name=${t.name}" th:checked="${t.enabled}">
+                                <span></span></label></td>
+                        </tr>
+                    </table>
+                </div>
+                <div>
+                    <h3>Actions</h3>
+                    <table class="table compact">
+                        <tr th:each="x : ${a.actions}">
+                            <td class="mono" th:text="${x.name}"></td>
+                            <td><span class="badge risk" th:classappend="'risk-' + ${x.risk}" th:text="${x.risk}"></span></td>
+                            <td class="small" th:text="${@fmt.label(x.requiredRole)}"></td>
+                            <td class="right"><label class="switch">
+                                <input type="checkbox" data-action="toggle" th:attr="data-app=${a.id},data-name=${x.name}" th:checked="${x.enabled}">
+                                <span></span></label></td>
+                        </tr>
+                        <tr th:if="${a.actions.isEmpty()}"><td class="muted">No actions configured</td></tr>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+<div id="toast" class="toast" hidden></div>
+</body>
+</html>

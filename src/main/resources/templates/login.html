@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in · SafeKeep Support Agent</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="login-page">
+<main class="login-card">
+    <div class="brand big"><span class="brand-mark">◆</span><span><strong>SafeKeep</strong><small>Support Agent</small></span></div>
+    <p class="muted">Investigates incidents on the SafeKeep backup platform.</p>
+    <div class="alert error" th:if="${param.error}">Wrong username or password.</div>
+    <div class="alert" th:if="${param.logout}">You have been signed out.</div>
+    <form method="post" action="/login" class="stack">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <label>Username <input name="username" autocomplete="username" required></label>
+        <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="btn primary" type="submit">Sign in</button>
+    </form>
+    <div class="divider"><span>Demo users · password “demo”</span></div>
+    <div class="quick">
+        <form method="post" action="/login" th:each="u : ${demoUsers}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <input type="hidden" name="username" th:value="${u}">
+            <input type="hidden" name="password" value="demo">
+            <button class="quick-user" type="submit">
+                <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(u,0,1))}">A</span>
+                <span><strong th:text="${u}">alice</strong>
+                    <small th:text="${u == 'alice'} ? 'Application user' : (${u == 'sam'} ? 'Support engineer' : 'Administrator')">role</small></span>
+            </button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

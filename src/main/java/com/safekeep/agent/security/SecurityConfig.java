@@ -37,7 +37,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(a -> a
                 .requestMatchers(HttpMethod.POST, "/api/events").permitAll()
-                .requestMatchers("/login", "/css/**", "/js/**", "/favicon.ico", "/error").permitAll()
+                .requestMatchers("/login", "/css/**", "/js/**", "/favicon.ico", "/favicon.svg", "/error").permitAll()
                 .requestMatchers("/api/health", "/api/metrics", "/health")
                     .hasAnyRole(Role.SUPPORT_ENGINEER.name(), Role.ADMIN.name())
                 .requestMatchers("/api/applications/**", "/applications/**").hasRole(Role.ADMIN.name())
@@ -47,9 +47,9 @@ public class SecurityConfig {
             .csrf(c -> c.ignoringRequestMatchers(
                     PathPatternRequestMatcher.withDefaults().matcher("/api/events"),
                     request -> request.getHeader("Authorization") != null))
-            .formLogin(Customizer.withDefaults())
+            .formLogin(f -> f.loginPage("/login").defaultSuccessUrl("/investigations", true).permitAll())
             .httpBasic(Customizer.withDefaults())
-            .logout(Customizer.withDefaults())
+            .logout(l -> l.logoutSuccessUrl("/login?logout"))
             .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                     PathPatternRequestMatcher.withDefaults().matcher("/api/**")));

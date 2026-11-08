@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${inv.displayId})}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+    <main class="content" id="investigation" th:attr="data-id=${inv.id},data-open=${inv.state.isOpen()}">
+
+        <a class="back" href="/investigations">← Investigations</a>
+        <header class="inv-head card">
+            <div class="inv-title">
+                <div class="row gap">
+                    <h1 class="mono" th:text="${inv.displayId}">INV-101</h1>
+                    <span class="badge" th:classappend="'st-' + ${inv.state}" th:text="${@fmt.label(inv.state)}">State</span>
+                    <span class="badge" th:classappend="'res-' + ${inv.resolution}" th:text="'Resolution: ' + ${@fmt.label(inv.resolution)}">Res</span>
+                </div>
+                <p class="lead"><strong th:text="${inv.eventType}">HIGH_MEMORY</strong> on
+                    <span class="mono" th:text="${inv.resource}">res</span> ·
+                    <span th:text="${inv.applicationId}">app</span></p>
+                <p class="muted small">
+                    Created <span th:text="${@fmt.dateTime(inv.createdAt)}"></span>
+                    · <span th:text="${inv.eventCount}"></span> event(s)
+                    · <span th:text="${inv.toolCallsUsed}"></span> tool call(s) this run
+                    <span th:if="${inv.recurrenceOfId != null}"> · recurrence of
+                        <a th:href="@{/investigations/{id}(id=${inv.recurrenceOfId})}" th:text="'INV-' + ${inv.recurrenceOfId}"></a></span>
+                </p>
+                <p class="state-reason" th:if="${inv.stateReason != null}" th:text="${inv.stateReason}"></p>
+            </div>
+            <div class="inv-actions">
+                <button class="btn" data-action="reinvestigate" th:attr="data-id=${inv.id}"
+                        th:disabled="${inv.state.isOpen()}">Investigate more</button>
+            </div>
+        </header>
+
+        <div class="layout-2">
+            <div class="col-main">
+                <!-- Approval -->
+                <section class="card approval" th:if="${pending != null}">
+                    <div class="approval-head">
+                        <span class="badge risk" th:classappend="'risk-' + ${pending.risk}" th:text="${pending.risk} + ' risk'">LOW</span>
+                        <h2>Approval needed</h2>
+                    </div>
+                    <p class="action-name mono" th:text="${pending.actionName}">action</p>
+                    <p th:text="${pending.description}">desc</p>
+                    <dl class="kv">
+                        <dt>Target</dt><dd class="mono" th:text="${inv.applicationId} + ' / ' + ${inv.resource}"></dd>
+                        <dt>Parameters</dt><dd class="mono" th:text="${pending.paramsJson}">{}</dd>
+                        <dt>Why</dt><dd th:text="${pending.reason}">reason</dd>
+                        <dt>Requires</dt><dd th:text="${@fmt.label(pending.requiredRole)}">Support engineer</dd>
+                        <dt>Expires</dt><dd th:text="${@fmt.time(pending.expiresAt)}">time</dd>
+                    </dl>
+                    <div class="actions" th:if="${canDecide}">
+                        <button class="btn primary" data-action="approve" th:attr="data-id=${inv.id},data-pid=${pending.id}">Approve and run</button>
+                        <button class="btn" data-action="reject" th:attr="data-id=${inv.id},data-pid=${pending.id}">Reject</button>
+                    </div>
+                    <p class="notice" th:unless="${canDecide}"
+                       th:text="'Requires ' + ${@fmt.label(pending.requiredRole)} + ' approval. You can view this proposal but not approve it.'"></p>
+                </section>
+
+                <!-- Summary -->
+                <section class="card" th:if="${inv.summary != null}">
+                    <h2>Summary</h2>
+                    <p class="lead" th:text="${inv.summary}">summary</p>
+                </section>
+                <section class="card working" th:if="${inv.summary == null and inv.state.isOpen()}">
+                    <div class="spinner"></div>
+                    <div><h2>Investigating…</h2><p class="muted">The Agent is gathering evidence. Steps appear in the timeline as they happen.</p></div>
+                </section>
+
+                <!-- Findings -->
+                <section class="card" th:if="${!d.findings.isEmpty()}">
+                    <h2>Findings</h2>
+                    <div class="finding confirmed" th:each="f : ${confirmed}">
+                        <span class="fkind">Confirmed</span>
+                        <p th:text="${f.statement}"></p>
+                        <div class="chips"><a class="chip" th:each="e : ${f.evidenceIdList}" th:href="'#ev-' + ${e}" th:text="${e}">E1</a></div>
+                    </div>
+                    <div class="finding suspected" th:each="f : ${suspected}">
+                        <span class="fkind">Suspected</span>
+                        <span class="badge subtle" th:if="${f.downgraded}" title="Marked CONFIRMED by the model without valid evidence">downgraded by validator</span>
+                        <p th:text="${f.statement}"></p>
+                        <div class="chips"><a class="chip" th:each="e : ${f.evidenceIdList}" th:href="'#ev-' + ${e}" th:text="${e}">E1</a></div>
+                    </div>
+                    <div class="finding ruled-out" th:each="f : ${ruledOut}">
+                        <span class="fkind">Ruled out</span>
+                        <p th:text="${f.statement}"></p>
+                        <div class="chips"><a class="chip" th:each="e : ${f.evidenceIdList}" th:href="'#ev-' + ${e}" th:text="${e}">E1</a></div>
+                    </div>
+                </section>
+
+                <section class="card" th:if="${!inv.missingInformationList.isEmpty()}">
+                    <h2>Missing information</h2>
+                    <ul class="plain"><li th:each="m : ${inv.missingInformationList}" th:text="${m}"></li></ul>
+                </section>
+
+                <section class="card" th:if="${!d.recommendations.isEmpty()}">
+                    <h2>Recommended next steps</h2>
+                    <ol class="steps"><li th:each="r : ${d.recommendations}" th:text="${r.body}"></li></ol>
+                </section>
+
+                <!-- Conversation -->
+                <section class="card">
+                    <h2>Conversation</h2>
+                    <div class="thread">
+                        <div class="msg" th:each="m : ${d.messages}" th:classappend="'from-' + ${m.author} + ' type-' + ${m.type}">
+                            <div class="msg-meta"><strong th:text="${m.author.name() == 'USER'} ? ${m.username} : ${@fmt.label(m.author)}">Agent</strong>
+                                <span class="muted" th:text="${@fmt.label(m.type)} + ' · ' + ${@fmt.time(m.createdAt)}"></span></div>
+                            <p th:text="${m.body}"></p>
+                        </div>
+                        <p class="muted" th:if="${d.messages.isEmpty()}">No messages yet.</p>
+                    </div>
+                    <form class="composer" id="composer" th:attr="data-id=${inv.id},data-waiting=${inv.state.name() == 'WAITING_FOR_INFO'}">
+                        <textarea name="text" rows="2" required
+                                  th:placeholder="${inv.state.name() == 'WAITING_FOR_INFO'} ? 'Reply to the Agent’s question…' : 'Ask a question or add context…'"></textarea>
+                        <div class="actions">
+                            <button class="btn primary" type="submit" data-kind="REPLY" th:if="${inv.state.name() == 'WAITING_FOR_INFO'}">Reply</button>
+                            <button class="btn" type="submit" data-kind="QUESTION" th:classappend="${inv.state.name() != 'WAITING_FOR_INFO'} ? 'primary'">Ask</button>
+                            <button class="btn" type="submit" data-kind="CONTEXT" title="Adds context and investigates again">Add context &amp; re-investigate</button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Evidence -->
+                <section class="card" th:if="${!d.evidence.isEmpty()}">
+                    <h2>Evidence</h2>
+                    <details class="evidence" th:each="e : ${d.evidence}" th:id="'ev-' + ${e.evidenceId}">
+                        <summary>
+                            <span class="chip" th:text="${e.evidenceId}">E1</span>
+                            <span class="mono strong" th:text="${e.toolName}">tool</span>
+                            <span class="mono muted small" th:text="${e.argsJson}">{}</span>
+                            <span class="badge" th:classappend="'tc-' + ${e.status}" th:text="${e.status}">OK</span>
+                            <span class="badge subtle" th:if="${e.errorCode != null}" th:text="${e.errorCode}"></span>
+                            <span class="badge subtle" th:if="${e.action}">action</span>
+                            <span class="muted small push" th:text="${e.actor} + ' · ' + ${e.durationMs} + ' ms'"></span>
+                        </summary>
+                        <pre th:text="${@fmt.pretty(e.resultJson)}">{}</pre>
+                    </details>
+                </section>
+            </div>
+
+            <div class="col-side">
+                <section class="card">
+                    <h2>Timeline</h2>
+                    <ol class="timeline" id="timeline">
+                        <li th:each="a : ${timeline}" th:classappend="'tl-' + ${a.type}">
+                            <span class="tl-time" th:text="${@fmt.time(a.createdAt)}"></span>
+                            <span class="tl-text"><strong th:text="${@fmt.label(a.type)}"></strong> <span th:text="${a.detail}"></span></span>
+                        </li>
+                    </ol>
+                </section>
+
+                <section class="card">
+                    <h2>Was this useful?</h2>
+                    <div class="actions feedback">
+                        <button class="btn" data-action="feedback" th:attr="data-id=${inv.id}" data-useful="true"
+                                th:classappend="${myFeedback != null and myFeedback.useful} ? 'selected'">👍 Useful</button>
+                        <button class="btn" data-action="feedback" th:attr="data-id=${inv.id}" data-useful="false"
+                                th:classappend="${myFeedback != null and !myFeedback.useful} ? 'selected'">👎 Not useful</button>
+                    </div>
+                </section>
+
+                <section class="card" th:if="${!pastProposals.isEmpty()}">
+                    <h2>Actions</h2>
+                    <div class="past" th:each="p : ${pastProposals}">
+                        <div class="row gap"><span class="mono strong" th:text="${p.actionName}"></span>
+                            <span class="badge" th:classappend="'ps-' + ${p.status}" th:text="${@fmt.label(p.status)}"></span></div>
+                        <p class="small muted" th:if="${p.decidedBy != null}" th:text="'Decided by ' + ${p.decidedBy} + ' at ' + ${@fmt.time(p.decidedAt)}"></p>
+                        <p class="small" th:if="${p.outcome != null}" th:text="${p.outcome}"></p>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <details>
+                        <summary><h2 class="inline">Audit trail</h2> <span class="muted small" th:text="${d.audit.size()} + ' entries'"></span></summary>
+                        <ol class="audit">
+                            <li th:each="a : ${d.audit}"><span class="mono small muted" th:text="${@fmt.time(a.createdAt)}"></span>
+                                <strong class="small" th:text="${a.type}"></strong> <span class="small muted" th:text="${a.actor}"></span>
+                                <div class="small" th:text="${a.detail}"></div></li>
+                        </ol>
+                    </details>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+<div id="toast" class="toast" hidden></div>
+</body>
+</html>

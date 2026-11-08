@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Health')}"></head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+    <main class="content">
+        <header class="page-head"><div><h1>Health &amp; Metrics</h1>
+            <p class="muted">Agent health, connections, intake errors and the PRD success measures.</p></div></header>
+
+        <div class="grid cards-4">
+            <div class="card stat">
+                <span class="muted small">LLM (Ollama)</span>
+                <span class="stat-value"><span class="dot" th:classappend="'dot-' + ${h.llm.status()}"></span><span th:text="${h.llm.status()}">UP</span></span>
+                <span class="small mono" th:text="${h.llm.model()}"></span>
+                <span class="small muted" th:if="${h.llm.error() != null}" th:text="${h.llm.error()}"></span>
+            </div>
+            <div class="card stat">
+                <span class="muted small">MET-01 · median time to first recommendation</span>
+                <span class="stat-value" th:text="${m.medianSecondsToFirstRecommendation != null} ? ${m.medianSecondsToFirstRecommendation} + ' s' : '—'"></span>
+            </div>
+            <div class="card stat">
+                <span class="muted small">MET-02 · evidence-backed / positive feedback</span>
+                <span class="stat-value"><span th:text="${m.percentWithEvidence != null} ? ${m.percentWithEvidence} + '%' : '—'"></span>
+                    <span class="muted"> / </span><span th:text="${m.percentPositiveFeedback != null} ? ${m.percentPositiveFeedback} + '%' : '—'"></span></span>
+                <span class="small muted" th:text="${m.feedbackCount} + ' feedback'"></span>
+            </div>
+            <div class="card stat">
+                <span class="muted small">MET-03 · action success / without approval</span>
+                <span class="stat-value"><span th:text="${m.actionSuccessRate != null} ? ${m.actionSuccessRate} + '%' : '—'"></span>
+                    <span class="muted"> / </span><span th:text="${m.actionsWithoutApproval}">0</span></span>
+                <span class="small muted" th:text="${m.actionsExecuted} + ' executed'"></span>
+            </div>
+        </div>
+
+        <div class="layout-2 even">
+            <section class="card">
+                <h2>Applications</h2>
+                <table class="table compact">
+                    <tr th:each="a : ${h.applications}">
+                        <td><span class="dot" th:classappend="${a.status == 'CONNECTED'} ? 'dot-UP' : 'dot-DOWN'"></span> <span th:text="${a.name}"></span></td>
+                        <td class="small" th:text="${a.status}"></td>
+                        <td class="small muted" th:text="${a.lastEventAt != null} ? 'last event ' + ${@fmt.ago(a.lastEventAt)} : 'no events yet'"></td>
+                    </tr>
+                </table>
+                <h2>Investigations by state</h2>
+                <div class="kv-inline">
+                    <span class="badge" th:each="e : ${h.investigationsByState}" th:classappend="'st-' + ${e.key}" th:text="${@fmt.label(e.key)} + ': ' + ${e.value}"></span>
+                </div>
+                <p class="small muted" th:text="'Workers: ' + ${h.workers.active} + ' active, ' + ${h.workers.queued} + ' queued'"></p>
+            </section>
+            <section class="card">
+                <h2>Intake errors</h2>
+                <p class="muted" th:if="${h.intakeErrors.isEmpty()}">No rejected events.</p>
+                <ol class="audit">
+                    <li th:each="f : ${h.intakeErrors}">
+                        <span class="mono small muted" th:text="${@fmt.time(f.at())}"></span>
+                        <strong class="small" th:text="${f.reason()}"></strong>
+                        <div class="small mono muted" th:text="${f.excerpt()}"></div>
+                    </li>
+                </ol>
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>
