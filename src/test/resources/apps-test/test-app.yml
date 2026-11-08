@@ -1,0 +1,15 @@
+# Test-only application (TC-CFG-04): proves a new application needs no core changes.
+safekeep:
+  applications:
+    test-app:
+      name: Test Application
+      description: Exists only in tests.
+      event-types: [TEST_ALERT]
+      tools:
+        - name: get_status
+          description: Current status.
+      actions:
+        - name: fix_it
+          description: Fixes the problem.
+          required-role: SUPPORT_ENGINEER
+          verify: { tool: get_status, condition: "status == OK" }

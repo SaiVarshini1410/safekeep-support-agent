@@ -1,0 +1,8 @@
+{
+  "tools": {
+    "get_logs": { "*": { "_error": "log store unreachable" } }
+  },
+  "actions": {
+    "purge_stale_sessions": { "error": "session registry locked" }
+  }
+}

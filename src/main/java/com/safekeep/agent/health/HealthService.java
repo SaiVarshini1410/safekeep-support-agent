@@ -2,10 +2,10 @@ package com.safekeep.agent.health;
 
 import com.safekeep.agent.apps.ApplicationRegistry;
 import com.safekeep.agent.intake.IntakeFailureLog;
-import com.safekeep.agent.investigation.AsyncRunScheduler;
 import com.safekeep.agent.investigation.Investigation;
 import com.safekeep.agent.investigation.InvestigationRepository;
 import com.safekeep.agent.investigation.InvestigationState;
+import com.safekeep.agent.investigation.RunScheduler;
 import com.safekeep.agent.llm.LlmClient;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +19,10 @@ public class HealthService {
     private final ApplicationRegistry registry;
     private final InvestigationRepository investigations;
     private final IntakeFailureLog failures;
-    private final AsyncRunScheduler scheduler;
+    private final RunScheduler scheduler;
 
     public HealthService(LlmClient llm, ApplicationRegistry registry, InvestigationRepository investigations,
-                         IntakeFailureLog failures, AsyncRunScheduler scheduler) {
+                         IntakeFailureLog failures, RunScheduler scheduler) {
         this.llm = llm;
         this.registry = registry;
         this.investigations = investigations;

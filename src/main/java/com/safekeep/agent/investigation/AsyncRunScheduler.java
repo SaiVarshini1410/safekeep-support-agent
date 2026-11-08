@@ -21,7 +21,9 @@ public class AsyncRunScheduler implements RunScheduler {
         executor.execute(() -> runner.run(investigationId));
     }
 
+    @Override
     public int activeCount() { return executor.getActiveCount(); }
 
+    @Override
     public int queueSize() { return executor.getThreadPoolExecutor().getQueue().size(); }
 }
