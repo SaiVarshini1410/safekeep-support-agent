@@ -1,0 +1,33 @@
+{
+  "tools": {
+    "get_pool_status": {
+      "*": {"pool": "pool1", "usagePercent": 72, "capacityTB": 120, "usedTB": 86.4, "growthPercentPerDay": 0.3, "state": "ONLINE"}
+    },
+    "get_expiration_status": {
+      "*": {"service": "expiration-service", "lastSuccessfulRun": "today 03:00 UTC", "pendingExpiredBackups": 0, "pendingSizeTB": 0}
+    },
+    "get_replication_status": {
+      "*": {"jobId": "DR-Replication-Nightly", "status": "SUCCESS", "throughputMBps": 420, "normalThroughputMBps": 430, "lastRun": "today 00:30 UTC"}
+    },
+    "get_system_logs": {
+      "boot=current": {"boot": "current", "lines": [
+        "systemd: Started storage-ingest.service",
+        "storage-ingest: listening on port 8900",
+        "expiration-service: run completed, 312 backups expired"]},
+      "boot=previous": {"boot": "previous", "lines": [
+        "systemd: Stopping storage services for planned maintenance",
+        "systemd: Reached target shutdown"]}
+    },
+    "get_disk_health": {
+      "*": {"pool": "pool1", "disks": [
+        {"disk": "sda", "state": "OK", "ioErrors": 0}, {"disk": "sdb", "state": "OK", "ioErrors": 0},
+        {"disk": "sdc", "state": "OK", "ioErrors": 0}, {"disk": "sdd", "state": "OK", "ioErrors": 0}]}
+    },
+    "get_service_status": {
+      "*": {"services": [
+        {"name": "storage-ingest", "status": "RUNNING", "uptime": "41 days"},
+        {"name": "expiration-service", "status": "RUNNING", "uptime": "41 days"},
+        {"name": "replication-service", "status": "RUNNING", "uptime": "41 days"}]}
+    }
+  }
+}

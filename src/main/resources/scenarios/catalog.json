@@ -1,0 +1,24 @@
+{
+  "scenarios": [
+    {"id": "S-1A", "application": "backup-server", "title": "Backup Server memory keeps growing", "useCase": "UC-1", "tier": "Core",
+     "eventType": "HIGH_MEMORY", "resource": "backup-server-01", "details": {"memoryPercent": 93, "threshold": 85}},
+    {"id": "S-1B", "application": "backup-server", "title": "Backup Server CPU saturated", "useCase": "UC-1", "tier": "Core",
+     "eventType": "HIGH_CPU", "resource": "backup-server-01", "details": {"cpuPercent": 96, "threshold": 85}},
+    {"id": "S-1C", "application": "storage-server", "title": "Storage pool almost full", "useCase": "UC-1", "tier": "Core",
+     "eventType": "HIGH_STORAGE_USAGE", "resource": "pool1", "details": {"usagePercent": 98, "threshold": 90}},
+    {"id": "S-2A", "application": "backup-server", "title": "VM backup job failed for 6 VMs", "useCase": "UC-2", "tier": "Core",
+     "eventType": "JOB_FAILED", "resource": "Daily-Gold-VMware", "details": {"vmsFailed": 6, "vmsTotal": 40}},
+    {"id": "S-2C", "application": "backup-server", "title": "VM backup job failed, unclear cause", "useCase": "UC-2", "tier": "Core",
+     "eventType": "JOB_FAILED", "resource": "Daily-Bronze-VMware", "details": {"vmsFailed": 2, "vmsTotal": 12}},
+    {"id": "S-2D", "application": "backup-server", "title": "Weekly compliance report failed", "useCase": "UC-2", "tier": "Extra",
+     "eventType": "REPORT_JOB_FAILED", "resource": "Weekly-Compliance-Report", "details": {"error": "query timeout"}},
+    {"id": "S-2E", "application": "storage-server", "title": "Replication to DR site failed", "useCase": "UC-2", "tier": "Extra",
+     "eventType": "REPLICATION_JOB_FAILED", "resource": "DR-Replication-Nightly", "details": {"target": "dr-storage-01"}},
+    {"id": "S-3A", "application": "backup-server", "title": "vCenter datasource unhealthy", "useCase": "UC-3", "tier": "Core",
+     "eventType": "DATASOURCE_UNHEALTHY", "resource": "vcenter-prod", "details": {"consecutiveFailures": 12}},
+    {"id": "S-3B", "application": "backup-server", "title": "Storage server unreachable", "useCase": "UC-3", "tier": "Core",
+     "eventType": "DEPENDENCY_UNAVAILABLE", "resource": "storage-01", "details": {"since": "02:14 UTC"}},
+    {"id": "S-4A", "application": "storage-server", "title": "Storage server restarted unexpectedly", "useCase": "Extension", "tier": "Core",
+     "eventType": "UNEXPECTED_RESTART", "resource": "storage-01", "details": {"previousUptime": "41 days", "bootTime": "02:31 UTC"}}
+  ]
+}

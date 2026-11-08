@@ -1,0 +1,15 @@
+{
+  "tools": {
+    "get_job_details": {
+      "*": {"jobId": "Daily-Bronze-VMware", "type": "VM backup", "status": "FAILED", "lastRun": "today 02:00 UTC",
+            "vmsTotal": 12, "vmsFailed": 2, "failedVms": ["app-db-07", "app-db-08"], "error": "Task failed (code 1)"}
+    },
+    "get_logs": {
+      "*": {"source": "backup-server-01", "lines": [
+        "INFO  job Daily-Bronze-VMware: started, 12 VMs, target storage-02",
+        "ERROR job Daily-Bronze-VMware: task for vm app-db-07 ended with code 1",
+        "ERROR job Daily-Bronze-VMware: task for vm app-db-08 ended with code 1",
+        "INFO  job Daily-Bronze-VMware: finished, 10 succeeded, 2 failed"]}
+    }
+  }
+}

@@ -5,6 +5,7 @@ import java.util.List;
 public record ParamConfig(String name, String type, List<String> allowed,
                           Integer min, Integer max, String defaultValue, boolean required) {
     public ParamConfig {
+        type = type == null ? "string" : type;
         allowed = allowed == null ? List.of() : List.copyOf(allowed);
     }
 }

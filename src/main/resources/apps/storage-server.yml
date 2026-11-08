@@ -1,0 +1,52 @@
+safekeep:
+  applications:
+    storage-server:
+      name: SafeKeep Backup Storage Server
+      description: Stores backup data in disk pools, expires old backups according to retention, and replicates data to a disaster-recovery site.
+      thresholds:
+        poolUsagePercent: 90
+        memoryPercent: 85
+      event-types: [HIGH_STORAGE_USAGE, REPLICATION_JOB_FAILED, UNEXPECTED_RESTART]
+      runbooks:
+        - runbooks/storage-server/storage-pool-full.md
+        - runbooks/storage-server/unexpected-restart.md
+      tools:
+        - name: get_pool_status
+          description: Usage of the storage pool, capacity and daily growth.
+          event-types: [HIGH_STORAGE_USAGE, REPLICATION_JOB_FAILED]
+        - name: get_expiration_status
+          description: Status of the expiration service that deletes backups past their retention.
+          event-types: [HIGH_STORAGE_USAGE]
+        - name: get_replication_status
+          description: Status and throughput of replication to the disaster-recovery site.
+          event-types: [REPLICATION_JOB_FAILED]
+        - name: get_system_logs
+          description: System and kernel log lines from the current boot or the previous boot.
+          event-types: ["*"]
+          parameters:
+            - { name: boot, type: string, allowed: [current, previous], default-value: current }
+            - { name: contains, type: string }
+        - name: get_disk_health
+          description: Health and I/O error counts of each disk in the pool.
+          event-types: [UNEXPECTED_RESTART, HIGH_STORAGE_USAGE]
+        - name: get_service_status
+          description: Status and uptime of the storage services.
+          event-types: ["*"]
+        - name: search_runbook
+          description: Search this application's troubleshooting runbooks by keywords.
+          event-types: ["*"]
+          parameters:
+            - { name: query, type: string, required: true }
+      actions:
+        - name: run_expiration_cleanup
+          description: Run the expiration service now to delete backups past their retention.
+          risk: HIGH
+          required-role: ADMIN
+          verify: { tool: get_pool_status, condition: "usagePercent < thresholds.poolUsagePercent", partial-condition: "usagePercent < 98" }
+          instructions: In Storage > Maintenance, start Expiration, then re-check pool usage.
+        - name: retry_replication
+          description: Restart the failed replication job.
+          risk: LOW
+          required-role: SUPPORT_ENGINEER
+          verify: { tool: get_replication_status, condition: "status == SUCCESS" }
+          instructions: In Replication, open the job and choose Restart.

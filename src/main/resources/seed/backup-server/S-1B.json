@@ -1,0 +1,45 @@
+{
+  "tools": {
+    "get_metrics": {
+      "metric=cpu": {"metric": "cpu", "unit": "%", "interval": "30 min", "samples": [24, 31, 52, 74, 88, 94, 96], "current": 96},
+      "metric=login_rate": {"metric": "login_rate", "unit": "logins/min", "interval": "30 min", "samples": [14, 40, 310, 760, 1050, 1180, 1200], "current": 1200},
+      "metric=auth_sessions": {"metric": "auth_sessions", "unit": "sessions", "interval": "30 min", "samples": [310, 1400, 9800, 22000, 34000, 43000, 48000], "current": 48000}
+    },
+    "get_top_processes": {
+      "*": {"host": "backup-server-01", "hostMemoryMB": 16384, "processes": [
+        {"name": "backup-core (java)", "memoryMB": 6900, "cpuPercent": 71},
+        {"name": "catalog-db", "memoryMB": 2300, "cpuPercent": 18},
+        {"name": "scheduler", "memoryMB": 360, "cpuPercent": 3},
+        {"name": "web-ui", "memoryMB": 190, "cpuPercent": 1}]}
+    },
+    "get_job_sessions": {
+      "*": {"sessionsInMemory": 14, "running": 12, "stale": 2, "oldestStaleAgeHours": 1}
+    },
+    "get_logs": {
+      "*": {"source": "backup-server-01", "lines": [
+        "INFO  auth: login ok user=svc-datamover session=8f2a91 client=proxy-03 step=snapshot",
+        "INFO  auth: login ok user=svc-datamover session=8f2a92 client=proxy-03 step=read-disk",
+        "INFO  auth: login ok user=svc-datamover session=8f2a93 client=proxy-03 step=write-block",
+        "INFO  auth: login ok user=svc-datamover session=8f2a94 client=proxy-03 step=write-block",
+        "WARN  auth: active sessions 48,112 approaching limit 50,000",
+        "WARN  backup-core: request queue length 940, average latency 2.8s",
+        "INFO  scheduler: 12 jobs running"]}
+    },
+    "get_recent_changes": {
+      "*": {"changes": [
+        {"when": "2 days ago", "type": "upgrade", "detail": "Data Mover Proxy proxy-03 updated from 4.2.0 to 4.2.1"},
+        {"when": "21 days ago", "type": "configuration", "detail": "Added datasource vcenter-dr"}]}
+    }
+  },
+  "actions": {
+    "clear_expired_auth_sessions": {
+      "result": {"status": "OK", "sessionsRemoved": 46800},
+      "effects": {
+        "get_metrics": {
+          "metric=cpu": {"metric": "cpu", "unit": "%", "interval": "30 min", "samples": [52, 74, 88, 94, 96, 41], "current": 41},
+          "metric=auth_sessions": {"metric": "auth_sessions", "unit": "sessions", "interval": "30 min", "samples": [22000, 34000, 43000, 48000, 1200], "current": 1200}
+        }
+      }
+    }
+  }
+}

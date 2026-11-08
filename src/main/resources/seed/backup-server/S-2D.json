@@ -1,0 +1,14 @@
+{
+  "tools": {
+    "get_job_details": {
+      "*": {"jobId": "Weekly-Compliance-Report", "type": "report", "status": "FAILED", "lastRun": "today 06:00 UTC",
+            "rangeDays": 365, "vmsCovered": 5000, "error": "query exceeded time limit of 120 s"}
+    },
+    "get_logs": {
+      "*": {"source": "backup-server-01", "lines": [
+        "INFO  report Weekly-Compliance-Report: started, range 365 days, 5000 VMs",
+        "ERROR report Weekly-Compliance-Report: query exceeded time limit of 120 s",
+        "INFO  catalog-db: slow query 120.0s (report Weekly-Compliance-Report)"]}
+    }
+  }
+}

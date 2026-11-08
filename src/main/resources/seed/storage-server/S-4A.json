@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "get_system_logs": {
+      "boot=current": {"boot": "current", "lines": [
+        "systemd: Started storage-ingest.service",
+        "zfs: pool1 state DEGRADED (1 device with errors)",
+        "storage-ingest: listening on port 8900"]},
+      "boot=previous": {"boot": "previous", "lines": [
+        "kernel: blk_update_request: I/O error, dev sdc, sector 88123904",
+        "kernel: blk_update_request: I/O error, dev sdc, sector 88124160",
+        "kernel: INFO: task txg_sync:812 blocked for more than 120 seconds",
+        "kernel: Kernel panic - not syncing: hung_task: blocked tasks"]}
+    },
+    "get_disk_health": {
+      "*": {"pool": "pool1", "disks": [
+        {"disk": "sda", "state": "OK", "ioErrors": 0}, {"disk": "sdb", "state": "OK", "ioErrors": 0},
+        {"disk": "sdc", "state": "FAILING", "ioErrors": 312, "smart": "reallocated sectors 1904"},
+        {"disk": "sdd", "state": "OK", "ioErrors": 0}]}
+    },
+    "get_service_status": {
+      "*": {"services": [
+        {"name": "storage-ingest", "status": "RUNNING", "uptime": "17 min"},
+        {"name": "expiration-service", "status": "RUNNING", "uptime": "17 min"},
+        {"name": "replication-service", "status": "RUNNING", "uptime": "17 min"}]}
+    },
+    "get_pool_status": {
+      "*": {"pool": "pool1", "usagePercent": 73, "capacityTB": 120, "usedTB": 87.6, "growthPercentPerDay": 0.3, "state": "DEGRADED"}
+    }
+  }
+}

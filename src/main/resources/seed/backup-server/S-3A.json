@@ -1,0 +1,19 @@
+{
+  "tools": {
+    "get_dependency_status": {
+      "*": {"dependencies": [
+        {"name": "vcenter-prod", "type": "vCenter datasource", "reachable": false, "tls": "FAILED",
+         "error": "TLS handshake failed: certificate expired", "certificateValidUntil": "yesterday 23:59 UTC", "lastSuccessfulCall": "11 h ago"},
+        {"name": "vcenter-dr", "type": "vCenter datasource", "reachable": true, "tls": "OK", "lastSuccessfulCall": "2 min ago"},
+        {"name": "storage-01", "type": "backup storage server", "reachable": true, "lastHeartbeat": "20 s ago"},
+        {"name": "storage-02", "type": "backup storage server", "reachable": true, "lastHeartbeat": "15 s ago"}]}
+    },
+    "get_logs": {
+      "*": {"source": "backup-server-01", "lines": [
+        "ERROR vmware: TLS handshake with vcenter-prod.corp.local failed: certificate expired",
+        "ERROR vmware: inventory refresh for vcenter-prod failed",
+        "WARN  scheduler: 14 VMware jobs for vcenter-prod postponed",
+        "INFO  job K8s-Daily: completed successfully, target storage-02"]}
+    }
+  }
+}

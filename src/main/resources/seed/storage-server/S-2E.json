@@ -1,0 +1,14 @@
+{
+  "tools": {
+    "get_replication_status": {
+      "*": {"jobId": "DR-Replication-Nightly", "status": "FAILED", "throughputMBps": 21, "normalThroughputMBps": 430,
+            "error": "transfer timed out after 4 h", "lastRun": "today 00:30 UTC"}
+    },
+    "get_system_logs": {
+      "boot=current": {"boot": "current", "lines": [
+        "replication-service: throughput 21 MB/s to dr-storage-01 (normal 430 MB/s)",
+        "replication-service: TCP retransmissions 18%",
+        "replication-service: job DR-Replication-Nightly timed out after 4 h"]}
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "tools": {
+    "get_dependency_status": {
+      "*": {"dependencies": [
+        {"name": "vcenter-prod", "type": "vCenter datasource", "reachable": true, "tls": "OK", "lastSuccessfulCall": "1 min ago"},
+        {"name": "vcenter-dr", "type": "vCenter datasource", "reachable": true, "tls": "OK", "lastSuccessfulCall": "2 min ago"},
+        {"name": "storage-01", "type": "backup storage server", "reachable": false, "error": "connection refused", "lastHeartbeat": "today 02:14 UTC"},
+        {"name": "storage-02", "type": "backup storage server", "reachable": true, "lastHeartbeat": "15 s ago"}]}
+    },
+    "get_storage_targets": {
+      "*": {"targets": [
+        {"name": "storage-01", "status": "OFFLINE", "usagePercent": null, "lastSeen": "today 02:14 UTC"},
+        {"name": "storage-02", "status": "ONLINE", "usagePercent": 64, "freeTB": 43.2}]}
+    },
+    "get_logs": {
+      "*": {"source": "backup-server-01", "lines": [
+        "ERROR storage: storage-01 unreachable (connection refused)",
+        "WARN  scheduler: 9 backups targeting storage-01 queued",
+        "ERROR restore: restore request for vm erp-app-01 failed: storage-01 unavailable",
+        "INFO  job K8s-Daily: completed successfully, target storage-02"]}
+    }
+  }
+}

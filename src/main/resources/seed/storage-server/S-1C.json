@@ -1,0 +1,31 @@
+{
+  "tools": {
+    "get_pool_status": {
+      "*": {"pool": "pool1", "usagePercent": 98, "capacityTB": 120, "usedTB": 117.6, "growthPercentPerDay": 1.4, "state": "ONLINE"}
+    },
+    "get_expiration_status": {
+      "*": {"service": "expiration-service", "lastSuccessfulRun": "9 days ago", "pendingExpiredBackups": 2140, "pendingSizeTB": 7.2}
+    },
+    "get_service_status": {
+      "*": {"services": [
+        {"name": "storage-ingest", "status": "RUNNING", "uptime": "41 days"},
+        {"name": "expiration-service", "status": "STOPPED", "since": "9 days ago", "exitCode": 137},
+        {"name": "replication-service", "status": "RUNNING", "uptime": "41 days"}]}
+    },
+    "get_system_logs": {
+      "boot=current": {"boot": "current", "lines": [
+        "expiration-service: process killed (exit code 137)",
+        "storage-ingest: pool1 usage 98%",
+        "storage-ingest: WARNING pool1 free space below 5%"]}
+    }
+  },
+  "actions": {
+    "run_expiration_cleanup": {
+      "result": {"status": "OK", "backupsExpired": 2140, "freedTB": 7.2},
+      "effects": {
+        "get_pool_status": {"*": {"pool": "pool1", "usagePercent": 92, "capacityTB": 120, "usedTB": 110.4, "growthPercentPerDay": 1.4, "state": "ONLINE"}},
+        "get_expiration_status": {"*": {"service": "expiration-service", "lastSuccessfulRun": "just now", "pendingExpiredBackups": 0, "pendingSizeTB": 0}}
+      }
+    }
+  }
+}

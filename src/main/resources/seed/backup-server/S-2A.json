@@ -1,0 +1,37 @@
+{
+  "tools": {
+    "get_job_details": {
+      "*": {"jobId": "Daily-Gold-VMware", "type": "VM backup", "status": "PARTIAL_FAILURE", "lastRun": "today 01:00 UTC",
+            "vmsTotal": 40, "vmsFailed": 6, "target": "storage-01",
+            "failedVms": ["erp-db-01", "erp-db-02", "erp-app-01", "crm-db-01", "file-srv-04", "mail-02"],
+            "error": "write failed: insufficient space on target storage-01"}
+    },
+    "get_logs": {
+      "*": {"source": "backup-server-01", "lines": [
+        "INFO  job Daily-Gold-VMware: started, 40 VMs, target storage-01",
+        "ERROR job Daily-Gold-VMware: vm erp-db-01 write failed: insufficient space on target storage-01",
+        "ERROR job Daily-Gold-VMware: vm erp-db-02 write failed: insufficient space on target storage-01",
+        "ERROR job Daily-Gold-VMware: vm crm-db-01 write failed: insufficient space on target storage-01",
+        "WARN  storage: storage-01 usage 98%",
+        "INFO  job Daily-Gold-VMware: finished, 34 succeeded, 6 failed"]}
+    },
+    "get_storage_targets": {
+      "*": {"targets": [
+        {"name": "storage-01", "status": "ONLINE", "usagePercent": 98, "freeTB": 2.4},
+        {"name": "storage-02", "status": "ONLINE", "usagePercent": 64, "freeTB": 43.2}]}
+    },
+    "get_recent_changes": {
+      "*": {"changes": [
+        {"when": "35 days ago", "type": "configuration", "detail": "Retention for policy Gold changed from 30 to 90 days"},
+        {"when": "21 days ago", "type": "configuration", "detail": "Added datasource vcenter-dr"}]}
+    },
+    "get_settings": {
+      "section=storage": {"section": "storage", "defaultTarget": "storage-01", "retentionDaysGold": 90, "retentionDaysSilver": 14}
+    }
+  },
+  "actions": {
+    "retry_failed_vms": {
+      "result": {"status": "OK", "message": "Retry started for 6 VMs"}
+    }
+  }
+}

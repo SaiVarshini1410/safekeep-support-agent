@@ -1,7 +1,10 @@
 package com.safekeep.agent.investigation;
 
 import jakarta.persistence.*;
+
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 
 @Entity
 public class Investigation {
@@ -25,10 +28,12 @@ public class Investigation {
 
     @Column(length = 1000) private String stateReason;
     @Column(length = 4000) private String summary;
+    @Column(length = 4000) private String missingInformation;
 
     private int eventCount;
     private Long recurrenceOfId;
     private int toolCallsUsed;
+    private String scenarioId;
 
     @Column(nullable = false) private Instant createdAt;
     @Column(nullable = false) private Instant updatedAt;
@@ -67,11 +72,37 @@ public class Investigation {
         this.updatedAt = now;
     }
 
-    public void markRecurrenceOf(Long previousInvestigationId) {
-        this.recurrenceOfId = previousInvestigationId;
+    public void markRecurrenceOf(Long previousInvestigationId) { this.recurrenceOfId = previousInvestigationId; }
+
+    public void assignScenario(String scenarioId) { this.scenarioId = scenarioId; }
+
+    public void recordToolCall() { this.toolCallsUsed++; }
+
+    public void resetBudget() { this.toolCallsUsed = 0; }
+
+    public void recordAnalysis(String summary, List<String> missing, Instant now) {
+        this.summary = summary;
+        this.missingInformation = missing == null ? null : String.join("\n", missing);
+        this.updatedAt = now;
+    }
+
+    /** Only system code calls this; the LLM can never set RESOLVED (rule R-V6). */
+    public void updateResolution(Resolution resolution, Instant now) {
+        this.resolution = resolution;
+        this.updatedAt = now;
+    }
+
+    public void markFirstRecommendation(Instant now) {
+        if (this.firstRecommendationAt == null) this.firstRecommendationAt = now;
     }
 
     public String displayId() { return "INV-" + id; }
+    public String getDisplayId() { return displayId(); }
+
+    public List<String> getMissingInformationList() {
+        return missingInformation == null || missingInformation.isBlank() ? List.of()
+                : Arrays.asList(missingInformation.split("\n"));
+    }
 
     public Long getId() { return id; }
     public String getApplicationId() { return applicationId; }
@@ -85,6 +116,7 @@ public class Investigation {
     public int getEventCount() { return eventCount; }
     public Long getRecurrenceOfId() { return recurrenceOfId; }
     public int getToolCallsUsed() { return toolCallsUsed; }
+    public String getScenarioId() { return scenarioId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getFirstRecommendationAt() { return firstRecommendationAt; }

@@ -7,7 +7,7 @@ public enum InvestigationState {
     COMPLETED,
     UNABLE_TO_COMPLETE;
 
-    /** Open = the Agent may still work on it. Used later for duplicate linking (D1). */
+    /** Open = the Agent may still work on it. Used for duplicate linking (D1). */
     public boolean isOpen() {
         return this != COMPLETED && this != UNABLE_TO_COMPLETE;
     }
