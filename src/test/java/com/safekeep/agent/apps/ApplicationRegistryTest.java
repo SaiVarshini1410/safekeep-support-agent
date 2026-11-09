@@ -65,7 +65,7 @@ class ApplicationRegistryTest {
     }
 
     @Test
-    @DisplayName("Application toString never reveals the API key (NFR-SEC-01)")
+    @DisplayName("TC-CFG-06 Application toString never reveals the API key")
     void toStringHidesKey() {
         ApplicationRegistry r = new ApplicationRegistry(props.applications(), Map.of("backup-server", "very-secret-key"));
         assertThat(r.find("backup-server").orElseThrow().toString()).doesNotContain("very-secret-key");

@@ -104,7 +104,7 @@ class SeedDataAdapterTest {
     }
 
     @Test
-    @DisplayName("Log filtering by text and runbook search work for any application")
+    @DisplayName("TC-ADP-07 Log filtering and runbook search")
     void logsAndRunbooks() {
         AppAdapter a = adapters.get("backup-server");
         Map<String, Object> logs = a.executeTool("S-1A", "get_logs", Map.of("contains", "session-cleanup", "level", "WARN"));

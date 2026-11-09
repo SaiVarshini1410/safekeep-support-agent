@@ -247,7 +247,7 @@ class AgentOrchestratorTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("Guard: an identical repeated tool call is not executed again")
+    @DisplayName("TC-AGT-16 An identical repeated tool call is not executed again")
     void duplicateCallSkipped() {
         Long id = newInvestigation("S-1A");
         llm.script(tool("get_job_sessions", Map.of()), tool("get_job_sessions", Map.of()), text("done"), answer(GOOD_FINAL));

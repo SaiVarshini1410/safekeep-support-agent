@@ -16,7 +16,7 @@ class ConditionEvaluatorTest {
     private final Map<String, Double> thresholds = Map.of("memoryPercent", 85.0, "poolUsagePercent", 90.0);
 
     @ParameterizedTest(name = "{0} -> {1}")
-    @DisplayName("Verification conditions")
+    @DisplayName("TC-APR-13 Verification conditions")
     @CsvSource(delimiter = '|', value = {
             "current < thresholds.memoryPercent | true",
             "usagePercent < thresholds.poolUsagePercent | false",

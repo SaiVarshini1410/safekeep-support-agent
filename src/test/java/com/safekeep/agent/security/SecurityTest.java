@@ -17,7 +17,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class SecurityTest extends IntegrationTestBase {
@@ -33,8 +32,10 @@ class SecurityTest extends IntegrationTestBase {
     @Test
     @DisplayName("TC-SEC-01 Without a session, pages redirect to login and the API returns 401")
     void unauthenticated() throws Exception {
-        mvc.perform(get("/investigations").accept(MediaType.TEXT_HTML)).andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
+        mvc.perform(get("/investigations").accept(MediaType.TEXT_HTML))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .header().string("Location", "/login"));
         mvc.perform(get("/api/investigations")).andExpect(status().isUnauthorized());
     }
 
@@ -73,7 +74,7 @@ class SecurityTest extends IntegrationTestBase {
     }
 
     @Test
-    @DisplayName("Event intake works with an API key and no session or CSRF token")
+    @DisplayName("TC-SEC-05 Event intake works with an API key and no session or CSRF token")
     void eventIntakeWithApiKey() throws Exception {
         String body = """
                 {"eventId":"evt-sec-1","application":"backup-server","eventType":"HIGH_MEMORY",
