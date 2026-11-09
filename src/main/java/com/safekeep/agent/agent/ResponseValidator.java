@@ -87,6 +87,14 @@ public class ResponseValidator {
             resolution = Resolution.UNKNOWN;
         }
 
+        // R-V8: only propose a fix when the evidence shows the problem is still present
+        if (proposal != null && resolution != Resolution.UNRESOLVED) {
+            recs.add(new ValidatedRecommendation("Action '" + proposal.action().name()
+                    + "' was not proposed because the evidence does not show the problem is still present.",
+                    recs.size() + 1, RecommendationKind.MANUAL));
+            proposal = null;
+        }
+
         // R-V7: a question for the user means we wait for a reply
         String question = m.get("questionForUser") instanceof String q && !q.isBlank()
                 && !q.equalsIgnoreCase("null") ? q.trim() : null;

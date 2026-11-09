@@ -4,6 +4,7 @@ import com.safekeep.agent.apps.ApplicationRegistry;
 import com.safekeep.agent.common.Json;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -11,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 
 @Configuration
+@EnableScheduling
 public class CoreConfig {
 
     @Bean

@@ -92,10 +92,19 @@ class ResponseValidatorTest {
     @Test
     @DisplayName("TC-VAL-05 (positive) Enabled action of this application is kept as a proposal")
     void enabledActionKept() {
-        String extra = ",\"proposedAction\":{\"name\":\"purge_stale_sessions\",\"params\":{},\"reason\":\"r\"}";
+        String extra = ",\"proposedAction\":{\"name\":\"purge_stale_sessions\",\"params\":{},\"reason\":\"r\"},\"resolution\":\"UNRESOLVED\"";
         ValidatedOutput out = validator.validate(output(finding("SUSPECTED", "\"E1\""), extra), ctx).output();
         assertThat(out.proposal()).isNotNull();
         assertThat(out.proposal().action().name()).isEqualTo("purge_stale_sessions");
+    }
+
+    @Test
+    @DisplayName("TC-VAL-10 No action is proposed when the problem is not shown to be present")
+    void noProposalWithoutUnresolvedProblem() {
+        String extra = ",\"proposedAction\":{\"name\":\"purge_stale_sessions\",\"params\":{}},\"resolution\":\"UNKNOWN\"";
+        ValidatedOutput out = validator.validate(output(finding("SUSPECTED", "\"E1\""), extra), ctx).output();
+        assertThat(out.proposal()).isNull();
+        assertThat(out.recommendations()).anySatisfy(r -> assertThat(r.text()).contains("was not proposed"));
     }
 
     @Test
