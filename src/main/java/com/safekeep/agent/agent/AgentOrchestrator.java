@@ -88,7 +88,7 @@ public class AgentOrchestrator implements InvestigationRunner {
         }
         RegisteredApplication app = registry.find(inv.getApplicationId()).orElseThrow();
         List<LlmToolSpec> tools = prompts.toolSpecs(registry.readToolsFor(app.id(), inv.getEventType()));
-        List<ActionConfig> actions = registry.enabledActions(app.id());
+        List<ActionConfig> actions = registry.enabledActions(app.id(), inv.getEventType());
 
         List<LlmMessage> conv = new ArrayList<>();
         conv.add(LlmMessage.system(prompts.system(app, actions)));
@@ -106,7 +106,7 @@ public class AgentOrchestrator implements InvestigationRunner {
             }
             investigations.publish(id, "analysis", "Analyzing evidence");
             conv.add(LlmMessage.user(prompts.finalInstruction(evidenceDigest(id), actions)));
-            ctx = context(id, app);
+            ctx = context(id, app, inv.getEventType());
             LlmResponse fin = chatWithRetry(new LlmRequest(conv, List.of(), true));
             ValidationResult vr = validator.validate(fin.content(), ctx);
             if (!vr.valid()) {
@@ -191,10 +191,10 @@ public class AgentOrchestrator implements InvestigationRunner {
                     investigations.publish(id, "tool", "Skipped repeated call " + call.name() + " (see " + previous + ")");
                     continue;
                 }
-                st.used.add(call.name());
                 investigations.publish(id, "tool", "Calling " + call.name() + " " + call.arguments());
                 ToolCallOutcome o = gateway.executeForAgent(inv, call.name(), call.arguments());
                 st.callCache.put(cacheKey, o.evidenceId());
+                if (o.ok()) st.used.add(call.name());     // only successful calls count as "used" (F8)
                 investigations.publish(id, "tool", o.evidenceId() + " " + call.name() + ": " + o.status()
                         + (o.errorCode() == null ? "" : " " + o.errorCode()));
                 st.conv.add(LlmMessage.tool(call.name(), gateway.contentForModel(o, cfg.maxToolResultChars())));
@@ -254,10 +254,10 @@ public class AgentOrchestrator implements InvestigationRunner {
         throw last;
     }
 
-    private ValidationContext context(Long id, RegisteredApplication app) {
+    private ValidationContext context(Long id, RegisteredApplication app, String eventType) {
         Map<String, ToolCallStatus> evidence = new HashMap<>();
         toolCalls.findByInvestigationIdOrderByIdAsc(id).forEach(t -> evidence.put(t.getEvidenceId(), t.getStatus()));
-        return new ValidationContext(evidence, app, name -> registry.isEnabled(app.id(), name));
+        return new ValidationContext(evidence, app, name -> registry.isEnabled(app.id(), name), eventType);
     }
 
     /** Re-lists every evidence item right before the final answer: small models lose track of earlier results. */

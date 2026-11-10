@@ -67,14 +67,15 @@ public class ResponseValidator {
             String name = pa.get("name") == null ? "" : String.valueOf(pa.get("name")).trim();
             if (!name.isBlank() && !name.equalsIgnoreCase("none") && !name.equalsIgnoreCase("null")) {
                 Optional<ActionConfig> action = ctx.application().action(name);
-                if (action.isPresent() && ctx.actionEnabled().test(name)) {
+                if (action.isEmpty() || !action.get().appliesTo(ctx.eventType())) {
+                    // invented action, another application's action, or one that does not fit this event: ignore
+                } else if (!ctx.actionEnabled().test(name)) {
+                    recs.add(new ValidatedRecommendation(ApprovalService.manualText(action.get()),
+                            recs.size() + 1, RecommendationKind.MANUAL));     // disabled: give the manual steps
+                } else {
                     Map<String, Object> params = pa.get("params") instanceof Map<?, ?> pm ? castMap(pm) : Map.of();
                     String reason = pa.get("reason") == null ? null : String.valueOf(pa.get("reason"));
                     proposal = new ValidatedProposal(action.get(), params, reason);
-                } else {
-                    String text = action.map(ApprovalService::manualText)
-                            .orElse("The proposed action '" + name + "' is not available; perform the remediation manually.");
-                    recs.add(new ValidatedRecommendation(text, recs.size() + 1, RecommendationKind.MANUAL));
                 }
             }
         }
@@ -89,8 +90,8 @@ public class ResponseValidator {
 
         // R-V8: only propose a fix when the evidence shows the problem is still present
         if (proposal != null && resolution != Resolution.UNRESOLVED) {
-            recs.add(new ValidatedRecommendation("Action '" + proposal.action().name()
-                    + "' was not proposed because the evidence does not show the problem is still present.",
+            recs.add(new ValidatedRecommendation("Proposed action '" + proposal.action().name()
+                    + "' was dropped: the evidence does not show the problem is still present.",
                     recs.size() + 1, RecommendationKind.MANUAL));
             proposal = null;
         }

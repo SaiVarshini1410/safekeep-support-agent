@@ -96,6 +96,7 @@ public class ToolGateway {
         }
         // G4: arguments
         List<ParamConfig> params = isAction ? action.get().parameters() : tool.get().parameters();
+        List<String> ignored = ArgumentValidator.unknownArguments(params, args);
         Map<String, Object> validated;
         try {
             validated = ArgumentValidator.validate(params, args);
@@ -114,6 +115,10 @@ public class ToolGateway {
                 : adapter.get().executeTool(inv.getScenarioId(), name, validated));
         try {
             Map<String, Object> result = future.get(timeoutSeconds, TimeUnit.SECONDS);
+            if (!ignored.isEmpty()) {
+                result = new java.util.LinkedHashMap<>(result);
+                result.put("_ignoredArguments", ignored);   // tell the model which names were not understood
+            }
             return record(inv, name, validated, ToolCallStatus.OK, null, null, result, start, actor, isAction, proposalId);
         } catch (TimeoutException e) {
             future.cancel(true);

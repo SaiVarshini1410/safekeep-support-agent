@@ -24,12 +24,16 @@ class ResponseValidatorTest {
             new ApplicationConfig("Backup Server", "desc", Map.of(), List.of("HIGH_MEMORY"),
                     List.of(new ToolConfig("get_metrics", "m", null, null)),
                     List.of(new ActionConfig("purge_stale_sessions", "Purge", "LOW", null, null,
-                            new VerifyConfig("get_metrics", null, "current < 85", null), "Release them in the console.")),
+                                    new VerifyConfig("get_metrics", null, "current < 85", null), "Release them in the console.",
+                                    List.of("HIGH_MEMORY")),
+                            new ActionConfig("clear_expired_auth_sessions", "Clear", "LOW", null, null,
+                                    new VerifyConfig("get_metrics", null, "current < 85", null), "Run session-admin.",
+                                    List.of("HIGH_CPU"))),
                     List.of()),
             "key", true, null);
     private final ValidationContext ctx = new ValidationContext(
             Map.of("E1", ToolCallStatus.OK, "E2", ToolCallStatus.OK, "E3", ToolCallStatus.ERROR),
-            app, name -> !disabled.contains(name));
+            app, name -> !disabled.contains(name), "HIGH_MEMORY");
 
     private static String output(String findings, String extra) {
         return "{\"summary\":\"s\",\"findings\":[" + findings + "]" + extra + "}";
@@ -72,20 +76,29 @@ class ResponseValidatorTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @DisplayName("TC-VAL-05 Unavailable action becomes a manual recommendation")
+    @DisplayName("TC-VAL-05 Invented, foreign or wrong-event actions are dropped silently")
     @CsvSource({
-            "unknown action, reboot_world, is not available",
-            "disabled action, purge_stale_sessions, Release them in the console.",
-            "other application's action, run_expiration_cleanup, is not available"
+            "invented action, reboot_world",
+            "other application's action, run_expiration_cleanup",
+            "action for another event type, clear_expired_auth_sessions"
     })
-    void unavailableActionBecomesManual(String row, String action, String expectedText) {
-        disabled.add("purge_stale_sessions");
-        String extra = ",\"proposedAction\":{\"name\":\"" + action + "\",\"params\":{}}";
+    void inappropriateActionDropped(String row, String action) {
+        String extra = ",\"proposedAction\":{\"name\":\"" + action + "\",\"params\":{}},\"resolution\":\"UNRESOLVED\"";
         ValidatedOutput out = validator.validate(output(finding("SUSPECTED", "\"E1\""), extra), ctx).output();
         assertThat(out.proposal()).isNull();
-        assertThat(out.recommendations()).anySatisfy(rec -> {
-            assertThat(rec.kind()).isEqualTo(RecommendationKind.MANUAL);
-            assertThat(rec.text()).contains(expectedText);
+        assertThat(out.recommendations()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("TC-VAL-11 A disabled action that fits the event becomes manual steps")
+    void disabledActionBecomesManual() {
+        disabled.add("purge_stale_sessions");
+        String extra = ",\"proposedAction\":{\"name\":\"purge_stale_sessions\",\"params\":{}},\"resolution\":\"UNRESOLVED\"";
+        ValidatedOutput out = validator.validate(output(finding("SUSPECTED", "\"E1\""), extra), ctx).output();
+        assertThat(out.proposal()).isNull();
+        assertThat(out.recommendations()).singleElement().satisfies(r -> {
+            assertThat(r.kind()).isEqualTo(RecommendationKind.MANUAL);
+            assertThat(r.text()).isEqualTo("Release them in the console.");
         });
     }
 
@@ -104,7 +117,7 @@ class ResponseValidatorTest {
         String extra = ",\"proposedAction\":{\"name\":\"purge_stale_sessions\",\"params\":{}},\"resolution\":\"UNKNOWN\"";
         ValidatedOutput out = validator.validate(output(finding("SUSPECTED", "\"E1\""), extra), ctx).output();
         assertThat(out.proposal()).isNull();
-        assertThat(out.recommendations()).anySatisfy(r -> assertThat(r.text()).contains("was not proposed"));
+        assertThat(out.recommendations()).anySatisfy(r -> assertThat(r.text()).contains("was dropped"));
     }
 
     @Test

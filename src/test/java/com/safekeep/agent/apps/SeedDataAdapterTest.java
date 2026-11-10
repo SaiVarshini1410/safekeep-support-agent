@@ -54,6 +54,17 @@ class SeedDataAdapterTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    @DisplayName("TC-ADP-08 get_metrics without a metric returns all metrics together")
+    void allMetrics() {
+        Map<String, Object> r = adapters.get("backup-server").executeTool("S-1B", "get_metrics", Map.of("metric", "all"));
+        Map<String, Object> metrics = (Map<String, Object>) r.get("metrics");
+        assertThat(metrics).containsKeys("memory", "cpu", "login_rate", "auth_sessions");
+        assertThat(((Map<String, Object>) metrics.get("login_rate")).get("current")).isEqualTo(1200);
+        assertThat(((Map<String, Object>) metrics.get("cpu")).get("current")).isEqualTo(96);
+    }
+
+    @Test
     @DisplayName("TC-ADP-02 Seed data never contains the answer")
     void seedDataHasNoAnswers() throws Exception {
         Resource[] files = new PathMatchingResourcePatternResolver().getResources("classpath*:seed/**/*.json");

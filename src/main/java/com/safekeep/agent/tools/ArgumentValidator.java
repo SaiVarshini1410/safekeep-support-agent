@@ -4,23 +4,30 @@ import com.safekeep.agent.apps.config.ParamConfig;
 
 import java.util.*;
 
-/** Gateway step G4: validates and safely coerces tool arguments against the configured schema. */
+/**
+ * Gateway step G4: validates and safely coerces tool arguments against the configured schema.
+ * Unknown argument names are ignored (and reported back to the model); they never reach the adapter.
+ * Object or list values where a plain value is expected (models sometimes echo the schema) count as "not given".
+ */
 public final class ArgumentValidator {
 
     private ArgumentValidator() { }
 
-    public static Map<String, Object> validate(List<ParamConfig> params, Map<String, Object> args) {
-        Map<String, Object> in = args == null ? Map.of() : args;
+    public static List<String> unknownArguments(List<ParamConfig> params, Map<String, Object> args) {
+        if (args == null) return List.of();
         Set<String> known = new HashSet<>();
         params.forEach(p -> known.add(p.name()));
-        for (String k : in.keySet()) {
-            if (!known.contains(k)) {
-                throw new InvalidArgumentException("Unknown argument '" + k + "'. Allowed: " + known);
-            }
-        }
+        return args.keySet().stream().filter(k -> !known.contains(k)).sorted().toList();
+    }
+
+    public static Map<String, Object> validate(List<ParamConfig> params, Map<String, Object> args) {
+        Map<String, Object> in = args == null ? Map.of() : args;
         Map<String, Object> out = new LinkedHashMap<>();
         for (ParamConfig p : params) {
             Object value = in.get(p.name());
+            if (value instanceof Map<?, ?> || value instanceof Collection<?>) {
+                value = null;
+            }
             if (value == null || String.valueOf(value).isBlank()) {
                 if (p.defaultValue() != null) {
                     value = p.defaultValue();

@@ -42,12 +42,12 @@ class ToolGatewayTest {
 
     @BeforeEach
     void setUp() {
-        ParamConfig metric = new ParamConfig("metric", "string", List.of("memory", "cpu"), null, null, null, true);
-        ParamConfig hours = new ParamConfig("hours", "integer", null, 1, 168, "24", false);
+        ParamConfig metric = new ParamConfig("metric", "string", List.of("memory", "cpu"), null, null, null, true, null);
+        ParamConfig hours = new ParamConfig("hours", "integer", null, 1, 168, "24", false, null);
         ApplicationConfig cfg = new ApplicationConfig("App", "d", Map.of(), List.of("EVT"),
                 List.of(new ToolConfig("get_metrics", "m", null, List.of(metric, hours)),
                         new ToolConfig("get_logs", "l", null, null)),
-                List.of(new ActionConfig("purge", "p", "LOW", null, null, new VerifyConfig("get_metrics", null, "x == 1", null), null)),
+                List.of(new ActionConfig("purge", "p", "LOW", null, null, new VerifyConfig("get_metrics", null, "x == 1", null), null, null)),
                 List.of());
         registry = new ApplicationRegistry(Map.of("app", cfg), Map.of("app", SECRET));
 
@@ -125,7 +125,6 @@ class ToolGatewayTest {
                 Arguments.of("hours=500", Map.of("metric", "memory", "hours", 500), "hours"),
                 Arguments.of("hours=\"abc\"", Map.of("metric", "memory", "hours", "abc"), "hours"),
                 Arguments.of("metric=disk", Map.of("metric", "disk"), "metric"),
-                Arguments.of("unknown argument", Map.of("metric", "memory", "server", "x"), "server"),
                 Arguments.of("missing required", Map.of(), "metric"));
     }
 
@@ -137,6 +136,16 @@ class ToolGatewayTest {
         assertThat(o.errorCode()).isEqualTo("INVALID_ARGUMENT");
         assertThat(o.message()).contains(field);
         assertThat(adapterCalls).isEmpty();
+    }
+
+    @Test
+    @DisplayName("TC-GW-09 Unknown arguments are ignored and reported; echoed schema objects fall back to defaults")
+    void lenientArguments() {
+        ToolCallOutcome o = gateway.executeForAgent(inv, "get_metrics",
+                Map.of("metric", "memory", "hours", Map.of("type", "integer"), "text", "abc"));
+        assertThat(o.status()).isEqualTo(ToolCallStatus.OK);
+        assertThat(adapterArgs.get(0)).containsEntry("hours", 24).doesNotContainKey("text");
+        assertThat(o.result()).containsEntry("_ignoredArguments", List.of("text"));
     }
 
     @Test

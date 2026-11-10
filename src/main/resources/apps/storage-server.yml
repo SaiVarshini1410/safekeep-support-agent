@@ -24,8 +24,8 @@ safekeep:
           description: System and kernel log lines from the current boot or the previous boot.
           event-types: ["*"]
           parameters:
-            - { name: boot, type: string, allowed: [current, previous], default-value: current }
-            - { name: contains, type: string }
+            - { name: boot, type: string, allowed: [current, previous], default-value: current, description: "current boot, or previous boot (before a restart)" }
+            - { name: contains, type: string, description: "Text to search for in log lines; optional" }
         - name: get_disk_health
           description: Health and I/O error counts of each disk in the pool.
           event-types: [UNEXPECTED_RESTART, HIGH_STORAGE_USAGE]
@@ -36,17 +36,19 @@ safekeep:
           description: Search this application's troubleshooting runbooks by keywords.
           event-types: ["*"]
           parameters:
-            - { name: query, type: string, required: true }
+            - { name: query, type: string, required: true, description: "Keywords to search for" }
       actions:
         - name: run_expiration_cleanup
           description: Run the expiration service now to delete backups past their retention.
           risk: HIGH
           required-role: ADMIN
+          event-types: [HIGH_STORAGE_USAGE]
           verify: { tool: get_pool_status, condition: "usagePercent < thresholds.poolUsagePercent", partial-condition: "usagePercent < 98" }
           instructions: In Storage > Maintenance, start Expiration, then re-check pool usage.
         - name: retry_replication
           description: Restart the failed replication job.
           risk: LOW
           required-role: SUPPORT_ENGINEER
+          event-types: [REPLICATION_JOB_FAILED]
           verify: { tool: get_replication_status, condition: "status == SUCCESS" }
           instructions: In Replication, open the job and choose Restart.

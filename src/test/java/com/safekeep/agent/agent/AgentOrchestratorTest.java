@@ -64,7 +64,8 @@ class AgentOrchestratorTest extends IntegrationTestBase {
         assertThat(toolNames(first)).containsExactlyInAnyOrder("get_metrics", "get_top_processes",
                 "get_job_sessions", "get_logs", "get_recent_changes", "search_runbook");
         assertThat(toolNames(first)).doesNotContain("purge_stale_sessions", "get_pool_status");
-        assertThat(first.messages().get(0).content()).contains("Proposable actions").contains("purge_stale_sessions");
+        assertThat(first.messages().get(0).content()).contains("Proposable actions").contains("purge_stale_sessions")
+                .doesNotContain("clear_expired_auth_sessions").doesNotContain("retry_failed_vms");   // scoped to HIGH_MEMORY
     }
 
     @Test

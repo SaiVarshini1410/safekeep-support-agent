@@ -32,7 +32,9 @@ public class PromptBuilder {
           .append("- If information is missing, say what is missing and what to check next.\n")
           .append("- When you have enough evidence, stop calling tools and reply with a short plain-text summary.\n");
         if (!app.config().thresholds().isEmpty()) {
-            sb.append("\nConfigured thresholds: ").append(app.config().thresholds()).append('\n');
+            sb.append("\nConfigured thresholds (an event is raised when a value crosses its threshold):\n");
+            app.config().thresholds().forEach((k, v) -> sb.append("- ").append(k).append(": ")
+                    .append(v == Math.rint(v) ? String.valueOf(v.intValue()) : String.valueOf(v)).append('\n'));
         }
         sb.append("\nProposable actions (not callable as tools):\n");
         if (actions.isEmpty()) {
@@ -108,7 +110,9 @@ public class PromptBuilder {
                 - Proposable actions: %s. If one of them directly fixes a CONFIRMED problem, put it in proposedAction.
                 - questionForUser: only if the cause is still unknown and only a human can provide the missing
                   information. Otherwise null.
-                - resolution: "UNRESOLVED" if the evidence shows the problem is still present, otherwise "UNKNOWN".
+                - resolution: "UNRESOLVED" when the event reports an active problem (a value above its threshold,
+                  a failed job, an unreachable dependency, an unexpected restart) and the evidence does not show
+                  that it has recovered. "UNKNOWN" only if the evidence shows recovery or you cannot tell.
                 - Use only evidence IDs listed above.
                 """.formatted(evidenceDigest, actionNames);
     }
@@ -140,6 +144,7 @@ public class PromptBuilder {
                 s.put("type", p.type());
                 if (!p.allowed().isEmpty()) s.put("enum", p.allowed());
                 StringBuilder d = new StringBuilder();
+                if (p.description() != null) d.append(p.description().trim()).append(p.description().trim().endsWith(".") ? " " : ". ");
                 if (p.min() != null || p.max() != null) d.append("range ").append(p.min()).append("-").append(p.max()).append(". ");
                 if (p.defaultValue() != null) d.append("default ").append(p.defaultValue()).append('.');
                 if (!d.isEmpty()) s.put("description", d.toString().trim());

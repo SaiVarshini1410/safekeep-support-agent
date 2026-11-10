@@ -44,6 +44,17 @@ public abstract class SeedDataAdapter implements AppAdapter {
         if (selectors == null) {
             return Map.of("result", "No data recorded for this tool");
         }
+        if ("all".equalsIgnoreCase(String.valueOf(args.get("metric")))) {
+            Map<String, Object> all = new LinkedHashMap<>();
+            selectors.forEach((key, value) -> {
+                if (key.startsWith("metric=") && value instanceof Map<?, ?> v) {
+                    Map<String, Object> copy = new LinkedHashMap<>(castMap(json.deepCopy(v)));
+                    copy.remove("metric");
+                    all.put(key.substring("metric=".length()), copy);
+                }
+            });
+            if (!all.isEmpty()) return Map.of("metrics", all);
+        }
         Object match = select(selectors, args);
         if (!(match instanceof Map<?, ?> m)) {
             return Map.of("result", "No data for these arguments");

@@ -14,43 +14,43 @@ safekeep:
         - runbooks/backup-server/dependencies.md
       tools:
         - name: get_metrics
-          description: Time series of a server metric over the last N hours. Metrics are memory, cpu, login_rate (logins per minute) and auth_sessions (active authentication sessions).
+          description: Server metrics over the last N hours. By default returns all metrics together (memory, cpu, login_rate in logins per minute, auth_sessions); or ask for one.
           event-types: [HIGH_MEMORY, HIGH_CPU, JOB_FAILED]
           parameters:
-            - { name: metric, type: string, allowed: [memory, cpu, login_rate, auth_sessions], required: true }
-            - { name: hours, type: integer, min: 1, max: 168, default-value: "24" }
+            - { name: metric, type: string, allowed: [all, memory, cpu, login_rate, auth_sessions], default-value: all, description: "Which metric; all returns every metric" }
+            - { name: hours, type: integer, min: 1, max: 168, default-value: "24", description: "How many hours back" }
         - name: get_top_processes
           description: Processes on the Backup Server ranked by memory or cpu usage.
           event-types: [HIGH_MEMORY, HIGH_CPU]
           parameters:
-            - { name: sortBy, type: string, allowed: [memory, cpu], default-value: memory }
-            - { name: limit, type: integer, min: 1, max: 20, default-value: "5" }
+            - { name: sortBy, type: string, allowed: [memory, cpu], default-value: memory, description: "Rank by memory or cpu" }
+            - { name: limit, type: integer, min: 1, max: 20, default-value: "5", description: "How many processes" }
         - name: get_job_sessions
           description: Counts of job sessions held in memory, how many are running and how many are stale.
           event-types: [HIGH_MEMORY, HIGH_CPU]
           parameters:
-            - { name: status, type: string, allowed: [all, running, stale], default-value: all }
+            - { name: status, type: string, allowed: [all, running, stale], default-value: all, description: "Which sessions to count" }
         - name: get_job_details
           description: Details of the failed backup or report job, including per-VM results and the error.
           event-types: [JOB_FAILED, REPORT_JOB_FAILED]
           parameters:
-            - { name: jobId, type: string }
+            - { name: jobId, type: string, description: "Job name; optional" }
         - name: get_logs
           description: Recent Backup Server log lines. Optionally filter by text and level.
           event-types: ["*"]
           parameters:
-            - { name: contains, type: string }
-            - { name: level, type: string, allowed: [ALL, ERROR, WARN, INFO], default-value: ALL }
+            - { name: contains, type: string, description: "Text to search for in log lines; optional" }
+            - { name: level, type: string, allowed: [ALL, ERROR, WARN, INFO], default-value: ALL, description: "Minimum log level" }
         - name: get_recent_changes
           description: Upgrades and configuration changes made in the last N days.
           event-types: [HIGH_MEMORY, HIGH_CPU, JOB_FAILED]
           parameters:
-            - { name: days, type: integer, min: 1, max: 60, default-value: "14" }
+            - { name: days, type: integer, min: 1, max: 60, default-value: "14", description: "How many days back" }
         - name: get_settings
           description: Configuration values for a settings section.
           event-types: [JOB_FAILED, REPORT_JOB_FAILED]
           parameters:
-            - { name: section, type: string, allowed: [jobs, reports, storage, auth], default-value: jobs }
+            - { name: section, type: string, allowed: [jobs, reports, storage, auth], default-value: jobs, description: "Settings section" }
         - name: get_storage_targets
           description: Backup storage servers connected to this Backup Server, with usage and status.
           event-types: [JOB_FAILED, DEPENDENCY_UNAVAILABLE]
@@ -58,7 +58,7 @@ safekeep:
           description: Reachability and health of dependencies (vCenter datasources, storage servers).
           event-types: [DATASOURCE_UNHEALTHY, DEPENDENCY_UNAVAILABLE]
           parameters:
-            - { name: name, type: string }
+            - { name: name, type: string, description: "Dependency name; optional" }
         - name: get_affected_operations
           description: Which product operations depend on which dependencies.
           event-types: [DATASOURCE_UNHEALTHY, DEPENDENCY_UNAVAILABLE]
@@ -66,33 +66,37 @@ safekeep:
           description: Search this application's troubleshooting runbooks by keywords.
           event-types: ["*"]
           parameters:
-            - { name: query, type: string, required: true }
+            - { name: query, type: string, required: true, description: "Keywords to search for" }
       actions:
         - name: purge_stale_sessions
           description: Release job sessions that are no longer attached to a running job.
           risk: LOW
           required-role: SUPPORT_ENGINEER
+          event-types: [HIGH_MEMORY]
           verify: { tool: get_metrics, args: { metric: memory }, condition: "current < thresholds.memoryPercent" }
           instructions: In the Backup Server admin console open Jobs > Sessions, select sessions without a running job and choose Release.
         - name: clear_expired_auth_sessions
           description: Remove expired and orphaned authentication sessions.
           risk: LOW
           required-role: SUPPORT_ENGINEER
+          event-types: [HIGH_CPU]
           verify: { tool: get_metrics, args: { metric: cpu }, condition: "current < thresholds.cpuPercent" }
           instructions: Run 'session-admin purge --expired' on the Backup Server.
         - name: retry_failed_vms
           description: Retry the VMs that failed in the last run of a backup job.
           risk: LOW
           required-role: SUPPORT_ENGINEER
+          event-types: [JOB_FAILED]
           parameters:
-            - { name: jobId, type: string }
+            - { name: jobId, type: string, description: "Job name; optional" }
           verify: { tool: get_job_details, condition: "status == SUCCESS" }
           instructions: In Jobs, open the job and choose Retry failed VMs.
         - name: retry_report_job
           description: Run a failed report job again.
           risk: LOW
           required-role: APP_USER
+          event-types: [REPORT_JOB_FAILED]
           parameters:
-            - { name: jobId, type: string }
+            - { name: jobId, type: string, description: "Report name; optional" }
           verify: { tool: get_job_details, condition: "status == SUCCESS" }
           instructions: In Reports, open the report and choose Run now.

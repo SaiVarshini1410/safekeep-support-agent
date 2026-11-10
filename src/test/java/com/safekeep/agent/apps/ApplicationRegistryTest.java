@@ -38,7 +38,7 @@ class ApplicationRegistryTest {
     @Test
     @DisplayName("TC-CFG-02a Action without requiredRole defaults to SUPPORT_ENGINEER")
     void defaultRole() {
-        ActionConfig a = new ActionConfig("x", "d", null, null, null, new VerifyConfig("t", null, "a == 1", null), null);
+        ActionConfig a = new ActionConfig("x", "d", null, null, null, new VerifyConfig("t", null, "a == 1", null), null, null);
         assertThat(a.requiredRole()).isEqualTo(Role.SUPPORT_ENGINEER);
     }
 
@@ -47,10 +47,23 @@ class ApplicationRegistryTest {
     void actionWithoutVerifyFails() {
         ApplicationConfig cfg = new ApplicationConfig("Bad", "d", Map.of(), List.of("E"),
                 List.of(new ToolConfig("t", "d", null, null)),
-                List.of(new ActionConfig("restart", "d", null, null, null, null, null)), List.of());
+                List.of(new ActionConfig("restart", "d", null, null, null, null, null, null)), List.of());
         assertThatThrownBy(() -> new ApplicationRegistry(Map.of("bad-app", cfg), Map.of()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("bad-app").hasMessageContaining("restart");
+    }
+
+    @Test
+    @DisplayName("TC-CFG-07 Actions are offered only for the event types they fit")
+    void actionsScopedToEventTypes() {
+        ApplicationRegistry r = new ApplicationRegistry(props.applications(),
+                Map.of("backup-server", "k1", "storage-server", "k2"));
+        assertThat(r.enabledActions("backup-server", "HIGH_CPU")).extracting(ActionConfig::name)
+                .containsExactly("clear_expired_auth_sessions");
+        assertThat(r.enabledActions("backup-server", "JOB_FAILED")).extracting(ActionConfig::name)
+                .containsExactly("retry_failed_vms");
+        assertThat(r.enabledActions("backup-server", "DATASOURCE_UNHEALTHY")).isEmpty();
+        assertThat(r.enabledActions("storage-server", "UNEXPECTED_RESTART")).isEmpty();
     }
 
     @Test

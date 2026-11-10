@@ -37,6 +37,12 @@ public class ApplicationRegistry {
                 throw new IllegalStateException("Application '" + id + "': action '" + a.name()
                         + "' has no verify configuration");
             }
+            for (String et : a.eventTypes()) {
+                if (!"*".equals(et) && !cfg.eventTypes().contains(et)) {
+                    throw new IllegalStateException("Application '" + id + "': action '" + a.name()
+                            + "' refers to unknown event type '" + et + "'");
+                }
+            }
             if (!toolNames.contains(a.verify().tool())) {
                 throw new IllegalStateException("Application '" + id + "': action '" + a.name()
                         + "' verifies with unknown tool '" + a.verify().tool() + "'");
@@ -84,6 +90,11 @@ public class ApplicationRegistry {
                         .filter(t -> t.appliesTo(eventType) && isEnabled(appId, t.name()))
                         .toList())
                 .orElse(List.of());
+    }
+
+    /** Actions the AI may propose for this event type (decision D22). */
+    public List<ActionConfig> enabledActions(String appId, String eventType) {
+        return enabledActions(appId).stream().filter(a -> a.appliesTo(eventType)).toList();
     }
 
     public List<ActionConfig> enabledActions(String appId) {
