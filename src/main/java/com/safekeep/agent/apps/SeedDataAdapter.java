@@ -64,6 +64,7 @@ public abstract class SeedDataAdapter implements AppAdapter {
         }
         Map<String, Object> result = castMap(json.deepCopy(m));
         filterLines(result, args);
+        addOtherMetrics(selectors, args, result);
         return result;
     }
 
@@ -149,6 +150,27 @@ public abstract class SeedDataAdapter implements AppAdapter {
             if (all) return e.getValue();
         }
         return selectors.get("*");
+    }
+
+    /**
+     * When one metric is requested, also include the current value of every other metric (F10),
+     * so a small model cannot miss a related spike (e.g. login rate during high CPU).
+     */
+    private void addOtherMetrics(Map<String, Object> selectors, Map<String, Object> args, Map<String, Object> result) {
+        Object requested = args.get("metric");
+        if (requested == null) return;
+        Map<String, Object> others = new LinkedHashMap<>();
+        selectors.forEach((key, value) -> {
+            if (key.startsWith("metric=") && value instanceof Map<?, ?> v
+                    && !key.substring("metric=".length()).equalsIgnoreCase(String.valueOf(requested))) {
+                Map<String, Object> summary = new LinkedHashMap<>();
+                summary.put("current", v.get("current"));
+                summary.put("unit", v.get("unit"));
+                summary.put("samples", v.get("samples"));
+                others.put(key.substring("metric=".length()), summary);
+            }
+        });
+        if (!others.isEmpty()) result.put("otherMetrics", others);
     }
 
     /** Generic log filtering for any result that has "lines". */
